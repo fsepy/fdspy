@@ -5,14 +5,18 @@ import re
 import subprocess
 import sys
 import time
+import collections
+import pandas
 from queue import Queue, Empty
 from threading import Thread
+import copy
+import shutil
 
 
-class FdsJob:
+class FdsJob(object):
     def __init__(
-            self, uid, path_fds, num_mpi=1, num_omp=1, path_work=None, config_sp_timeout=30 * 24 * 60 * 60,
-            user='n/a'
+            self, uid, path_fds, num_mpi=1, num_omp=1, path_work=None, user='n/a', path_destination=None, **red_kwargs,
+
     ):
 
         # ASSIGN USER DEFINED PROPERTIES
@@ -21,51 +25,50 @@ class FdsJob:
         if path_work is None:
             self.path_work = os.path.dirname(path_fds)
         self.path_fds = os.path.realpath(path_fds)
+        self.path_destination = path_destination
         self.num_mpi = int(num_mpi)
         self.num_omp = int(num_omp)
-        self.config_sp_timeout = config_sp_timeout
+        # self.config_sp_timeout = config_sp_timeout
         self.user = user
 
         # ASSIGN DERIVED PROPERTIES
 
-        self._rep_simulation_time_1 = re.compile('Simulation Time:[\s.=0-9]*')
-        self._rep_simulation_time_2 = re.compile('\d+\.\d*')
+        with open(self.path_fds, 'r') as f:
+            self._fds_str = f.read()
+        # self._chid = re.compile("'[\S]+'").findall()[0].replace("'", '')
+
+        self._chid = re.compile("'[\S]+'").search(
+            re.compile('CHID=[\s\S]+?[/,]').search(
+                re.compile("&HEAD[\s\S]*?/").search(
+                    self._fds_str
+                ).group(0)
+            ).group(0)
+        ).group(0).replace("'", '')
+
+        self._uptime = re.compile("[\d.]+").search(
+            re.compile("T_END=[\s\S\d.]*?[,/]").search(
+                re.compile("&TIME[\s\S]*?/").search(
+                    self._fds_str
+                ).group(0)
+            ).group(0)
+        ).group(0)
+
+        self._uptime = float(self._uptime)
 
         self._current_progress = 0
-        self._is_live = False
-        self._time_started = None
-        self._time_finished = None
-        # self.std_out = None
 
         self.sp = None
-        self.sp_queue = None
-        self.sp_threads = None
-
-    @staticmethod
-    def enqueue_output(stdout, queue):
-        for line in iter(stdout.readline, b''):
-            queue.put(line)
-        stdout.close()
 
     def run_job(self):
 
-        # Set properties
-        self._time_started = time.time()
-        self._is_live = True
-
-        # Change work directory to the *.fds file's location
         os.chdir(self.path_work)
-
-        # Set number of Threads
         os.environ['OMP_NUM_THREADS'] = '{:d}'.format(self.num_omp)
 
-        # Make run fds command
         if self.num_mpi == 1:
             str_cmd = 'fds {}'.format(os.path.basename(self.path_fds))
         else:
             str_cmd = 'mpiexec -localonly -n {:d} fds {}'.format(self.num_mpi, os.path.basename(self.path_fds))
 
-        # Run FDS, summon subprocess
         self.sp = subprocess.Popen(
             args=str_cmd,
             env=os.environ,
@@ -76,210 +79,212 @@ class FdsJob:
             close_fds='posix' in sys.builtin_module_names
         )
 
-        self.sp_queue = Queue()
-        self.sp_threads = Thread(
-            target=self.enqueue_output, args=(self.sp.stdout, self.sp_queue)
-        )
-        self.sp_threads.daemon = True  # thread dies with the program
-        self.sp_threads.start()
-
-    def get_stdout_line(self, timeout=1):
-
-        # read line without blocking
-        try:
-            line = self.sp_queue.get(timeout=timeout)  # or q.get_nowait()
-            try:
-                stdout_line = line.decode('utf-8')
-            except IndexError:
-                stdout_line = None
-
-        except Empty:
-            stdout_line = None
-
-        return stdout_line
-
-    def get_current_progress(self, timeout=1):
-
-        if self.check_is_live():
-            pg = self.get_stdout_line(timeout)
-            # print(type(pg))
-            # print(pg)
-            # pg = pg.decode('utf-8')
-            try:
-                pg = float(self._rep_simulation_time_2.findall(self._rep_simulation_time_1.findall(pg)[-1])[0])
-            except (IndexError, TypeError):
-                pg = 0
-        else:
-            pg = 0
-
-        self._current_progress = max(pg, self._current_progress)
-
-        return self._current_progress
-
     def check_is_live(self):
         if self.sp.poll() is not None:
             return False
         else:
             return True
 
+    def get_current_progress(self):
 
-class UserClientBG:
-    def __init__(self, path_fds_queue, available_cpu_cores, path_current_summary):
+        path_out_file = os.path.join(self.path_work, '{}.out'.format(self._chid))
 
-        self.path_fds_queue = path_fds_queue
-        self.path_current_summary = path_current_summary
+        try:
+            with open(path_out_file, 'r') as f:
+                str_out_file = f.read()
+        except FileNotFoundError:
+            str_out_file = ''
+
+        try:
+            self._current_progress = float(
+                re.compile('[\d.]+').findall(
+                    re.compile('Total Time:[\s\S\d.]+?s').findall(
+                        str_out_file
+                    )[-1]
+                )[-1]
+            )
+        except IndexError:
+            pass
+
+        return self._current_progress
+
+    def copy_files(self):
+        if self.path_destination:
+            shutil.copytree(self.path_work, os.path.join(self.path_destination, os.path.basename(self.path_work)))
+
+
+class ClientAgentBack(object):
+    def __init__(self, path_fds_queue, available_cpu_cores):
+
+        self.path_fds_queue_json = path_fds_queue
         self.count_cpu_cores_available = available_cpu_cores
 
         self._count_live_jobs = 0
         self._count_cpu_cores_used = 0
         self._list_FdsJob = []
-        self._dict_all_jobs = {"-1": {
-            "USER": "Example",
-            "JOB NAME": "example.fds",
-            "CPU CORES": 2,
-            "PROGRESS": 100,
-            "STATUS": "COMPLETE"
-        }}
 
-    def start(self, time_wait=30):
+    def start(self, time_wait=30.):
 
         while True:
-            # UPDATE STATUS
-            self.status_update()
+            self.update_queue()
 
-            # print("live jobs count:", self._count_live_jobs)
-            # print("cpu used:", self._count_cpu_cores_used)
-
-            # CHECK AVAILABLE CPU USAGE
+            # CHECK CPU USAGE
             if (self.count_cpu_cores_available - self._count_cpu_cores_used) <= 0:
                 time.sleep(time_wait)
                 continue
 
             # READ FDS QUEUE
-            fds_queue = self.queue_read(self.path_fds_queue)
-            if len(fds_queue) == 0:
+            fds_queue_pending = self.queue_status(0)
+            if len(fds_queue_pending) == 0:
                 time.sleep(time_wait)
                 continue
 
             # CHECK NEXT IN QUEUE
-            fds_job_config_key_next = sorted(fds_queue.keys())[0]
-            fds_job_config = fds_queue[fds_job_config_key_next]
-            num_tc = fds_job_config['num_mpi'] * fds_job_config['num_omp']
+            fds_job_config_key_next = sorted(fds_queue_pending.keys())[0]
+            fds_job_config = fds_queue_pending[fds_job_config_key_next]
 
             # RUN FDS JOB IF ENOUGH RESOURCE
-            if self.count_cpu_cores_available - self._count_cpu_cores_used >= num_tc:
+            count_pt = fds_job_config['num_omp'] * fds_job_config['num_mpi']
+            count_cpu_available = self.count_cpu_cores_available - self._count_cpu_cores_used
+            if count_cpu_available >= count_pt:
+                print("available cpu:", count_cpu_available)
+                print("required cpu:", count_pt)
                 # QUEUE FDS
-                if False:
-                    print(fds_job_config)
-                    self.queue_delete(self.path_fds_queue, fds_job_config_key_next)
-                    continue
                 j = FdsJob(uid=fds_job_config_key_next, **fds_job_config)
                 j.run_job()
                 self._list_FdsJob.append(j)
-                self._dict_all_jobs[fds_job_config_key_next] = {
-                    "USER": "N/A",  # todo
-                    "JOB NAME": os.path.basename(fds_job_config["path_fds"]),
-                    "PROGRESS": 0,
-                    "CPU CORES": num_tc,
-                    "STATUS": 'Live',
-                }
-                print('running {}'.format(fds_job_config))
-                # DELETE QUEUE AND WRITE NEW QUEUE FILE
-                self.queue_delete(self.path_fds_queue, fds_job_config_key_next)
+                self.update_queue(j.uid, status=1)
+                print(fds_job_config)
 
             time.sleep(time_wait)
 
-    @staticmethod
-    # ABLE TO VIEW QUEUED TASKS
-    def queue_read(path_fds_queue):
-        with open(path_fds_queue, 'r') as f:
-            fds_queue = json.load(f)
+    def queue_read(self):
+        with open(self.path_fds_queue_json, 'r') as f:
+            j = json.load(f)
+        return j
 
-        time.sleep(0.2)
+    def update_queue(self, uid=None, path_fds=None, num_omp=None, num_mpi=None, progress=None, status=None):
+        j = self.queue_read()
 
-        return fds_queue
-
-    @staticmethod
-    def queue_delete(path_fds_queue, key):
-        with open(path_fds_queue, 'r') as f:
-            fds_queue = json.load(f)
-        del fds_queue[key]
-        with open(path_fds_queue, 'w') as f:
-            json.dump(fds_queue, f, indent=4, sort_keys=True)
-        return fds_queue
-
-    def status_update(self):
-        # UPDATE LIVE JOB LIST
+        if uid:
+            if path_fds:
+                j[uid]['path_fds'] = path_fds
+            if num_omp:
+                j[uid]['num_omp'] = num_omp
+            if num_mpi:
+                j[uid]['num_mpi'] = num_mpi
+            if progress:
+                j[uid]['progress'] = progress
+            if status:
+                j[uid]['status'] = status
 
         count_tc = 0
-
         for i, FdsJob in enumerate(self._list_FdsJob):
             if FdsJob.check_is_live():
-                FdsJob.get_current_progress(timeout=5)
                 count_tc += (FdsJob.num_omp * FdsJob.num_mpi)
+                j[FdsJob.uid]['progress'] = FdsJob.get_current_progress()
             else:
-                self._dict_all_jobs[FdsJob.uid]["STATUS"] = "Complete"
+                j[FdsJob.uid]['status'] = 2
+                FdsJob.copy_files()
                 del self._list_FdsJob[i]
+            j[FdsJob.uid]['progress'] = FdsJob.get_current_progress()
 
         # UPDATE LIVE JOB COUNT
         self._count_live_jobs = len(self._list_FdsJob)
         self._count_cpu_cores_used = count_tc
 
-    def get_current_live_job_summary(self):
-        # USER, FILE NAME, PROGRESS, IS COMPLETE, CPU CORES
+        with open(self.path_fds_queue_json, 'w') as f:
+            json.dump(j, f, indent=4)
 
-        # dict_data = {
-        #     "FILE NAME": [],
-        #     "PROGRESS": [],
-        #     "CPU CORES": [],
-        #     "STATUS": [],
-        # }
+    def queue_status(self, status):
+        q = self.queue_read()
+        q_ = copy.copy(q)
+        for k, v in q.items():
+            if v['status'] != status:
+                del q_[k]
 
-        for i, FdsJob in enumerate(self._list_FdsJob):
-            self._dict_all_jobs[FdsJob.uid]["PROGRESS"] = FdsJob._current_progress
+        return q_
+
+
+class ClientAgentFront(object):
+    def __init__(self, path_fds_queue):
+        self.path_fds_queue = path_fds_queue
+
+        self.__QUEUE_FORMAT = {
+            "path_fds": "FDS INPUT FILE PATH",
+            "path_destination": None,
+            "num_omp": "NUMBER OF MP THREADS",
+            "num_mpi": "NUM OF MPI PROCESS",
+            "progress": None,
+            "status": None,
+        }
+
+
+    def start(self):
+        while True:
+            cmd = input(">>>")
+
+            if cmd == "exit":
+                break
+            elif cmd == "append":
+                self.queue_write(self.queue_append())
+            elif cmd == "help":
+                print("append, delete, insert, ")
+            else:
+                print("Unknown command.")
+
+    def queue_append(self):
+        dict_queue = self.queue_read()
+        if len(dict_queue) > 0:
+            uid = "{:d}".format(int(list(dict_queue)[-1])+1)
+        else:
+            uid = 0
+
+        dict_queue[uid] = {}
+        dict_queue[uid]["path_fds"] = self._input_path("Drop *.fds file: ")
+        dict_queue[uid]["num_omp"] = int(input("Number of OMP threads: "))
+        dict_queue[uid]["num_mpi"] = int(input("Number of MPI processes: "))
+        dict_queue[uid]["progress"] = 0
+        dict_queue[uid]["status"] = 0
+        dict_queue[uid]["path_destination"] = self._input_path("Drop destination folder: ")
+
+        return dict_queue
+
+    def queue_delete(self):
         pass
+
+    def queue_insert(self):
+        pass
+
+    def queue_read(self):
+        with open(self.path_fds_queue, "r") as f:
+            # dict_queue = json.load(f)
+            return collections.OrderedDict(sorted(json.load(f).items()))
+
+    def queue_write(self, str):
+        with open(self.path_fds_queue, "w") as f:
+            json.dump(str, f, indent=4)
+
+    @staticmethod
+    def _input_path(msg):
+        r = input(msg)
+        if r[0] == r[-1] == '"' or r[0] == r[-1] == "'":
+            return os.path.realpath(r[1:-1])
+        else:
+            return os.path.realpath(r)
 
 
 if __name__ == '__main__':
 
-    C = UserClientBG(
-        path_fds_queue=r"C:\Users\ian\Desktop\fdspy_test\fds_batch.json",
-        path_current_summary=r"C:\Users\ian\Desktop\fdspy_test\current_summary.csv",
-        available_cpu_cores=4
+    # CA = ClientAgentBack(
+    #     path_fds_queue=r"C:\Users\ian\Desktop\fdspy_test\fds_batch.json",
+    #     available_cpu_cores=4
+    # )
+    # CA.start(time_wait=1)
+
+    CAF = ClientAgentFront(
+        path_fds_queue=r"C:\Users\IanFu\Desktop\fdspy_test\fds_queue.json"
     )
-
-    C.start(time_wait=1)
-
-    # import collections
-    #
-    # while True:
-    #
-    #     with open(r"C:\Users\ian\Desktop\fdspy_test\fds_batch.json", 'r') as f:
-    #         fds_queue = json.load(f)
-    #
-    #     fds_queue = collections.OrderedDict(sorted(fds_queue.items()))
-    #     list_fds_queue_keys = list(fds_queue)
-    #
-    #     queue_last = int(list_fds_queue_keys[-1])
-    #     queue_length = len(list_fds_queue_keys)
-    #
-    #     fds_job_config = fds_queue[list_fds_queue_keys[0]]
-    #     del fds_queue[list_fds_queue_keys[0]]
-    #
-    #     # QUEUE FDS
-    #     j = FdsJob(**fds_job_config)
-    #     j.run_job()
-    #
-    #     while True:
-    #
-    #         if j.sp.poll() is not None:
-    #             break
-    #         else:
-    #             print(j.get_stdout_line())
-    #
-    #     with open(r"C:\Users\ian\Desktop\fdspy_test\fds_batch.json", 'w') as f:
-    #         json.dump(fds_queue, f, indent=4, sort_keys=True)
-    #
-
+    CAF.start()
 
     pass

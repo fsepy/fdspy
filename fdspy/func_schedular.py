@@ -1,59 +1,41 @@
-import collections
-import json
-import time
-from fdspy.fds_cls import FdsJob
-from tkinter import filedialog, Tk, StringVar
-import os
+import click
+import requests
 
+__author__ = "Oyetoke Toby"
 
-def run_fds(fds_job_config):
-    # CREATE FDS JOBS
-    # ===============
-    j = FdsJob(**fds_job_config)
-
-    # RUN FDS JOBS
-    # ============
-    j.run_job()
-
-    return j
-
-
-def select_files():
-    # SELECT FDS FILES
-    # ================
-    list_fds_file = []
-    list_dict_fds_job_config = []
-    root = Tk()
-    root.withdraw()
-    path_file = StringVar()
-    while True:
-        path_fds_file = filedialog.askopenfile(title='Select FDS file', filetypes=[('FDS', ['.fds'])])
-        path_file.set(path_fds_file)
-        root.update()
-
-        if path_fds_file:
-            path_fds_file = os.path.realpath(path_fds_file.name)
-            list_fds_file.append(path_fds_file)
-            print('Job: {}'.format(path_fds_file))
-            list_dict_fds_job_config.append(
-                {
-                    'path_fds': path_fds_file,
-                    'num_mpi': int(input('MPI Process: ')),
-                    'num_omp': int(input('OMP Threads: ')),
-                }
-            )
-
-        else:
-            break
-
-    return list_fds_file
-
-
-
-
-
-if __name__ == '__main__':
-
-
-
+@click.group()
+def main():
+    """
+    Simple CLI for querying books on Google Books by Oyetoke Toby
+    """
     pass
+
+@main.command()
+@click.argument('query')
+def search(query):
+    """This search and return results corresponding to the given query from Google Books"""
+    url_format = 'https://www.googleapis.com/books/v1/volumes'
+    query = "+".join(query.split())
+
+    query_params = {
+        'q': query
+    }
+
+    response = requests.get(url_format, params=query_params)
+
+    click.echo(response.json()['items'])
+
+@main.command()
+@click.argument('id')
+def get(id):
+    """This return a particular book from the given id on Google Books"""
+    url_format = 'https://www.googleapis.com/books/v1/volumes/{}'
+    click.echo(id)
+
+    response = requests.get(url_format.format(id))
+
+    click.echo(response.json())
+
+
+if __name__ == "__main__":
+    main()

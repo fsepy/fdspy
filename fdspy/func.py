@@ -4,6 +4,7 @@ from tkinter import Tk, filedialog, StringVar
 import itertools
 import re
 import numpy
+import subprocess
 
 
 def generate_xyz(*list_elements):
@@ -16,14 +17,16 @@ def generate_xyz(*list_elements):
 
 def generate_devc(id_prefix, quantity, xyz, is_return_list=False):
 
-    id_fmt = '{quantity}_{xyz}'
+    id_fmt = '{quantity}_{index:d}'
     xyz_fmt = '{:.3f},{:.3f},{:.3f}'
     str_fmt = "&DEVC ID='{id}', QUANTITY='{quantity}', XYZ={xyz}/"
 
     list_cmd = []
-    for i in xyz:
-        xyz_str = xyz_fmt.format(*i)
-        id_str = id_fmt.format(quantity=id_prefix, xyz=xyz_str)
+    for i, v in enumerate(xyz):
+        xyz_str = xyz_fmt.format(*v)
+
+        id_str = id_fmt.format(quantity=id_prefix, index=i)
+
         list_cmd.append(str_fmt.format(id=id_str, quantity=quantity, xyz=xyz_str))
 
     if is_return_list:
@@ -62,64 +65,105 @@ def open_files_tk(title='Select Input Files', filetypes=[('csv', ['.csv'])]):
 
     return list_paths
 
+
 def mtr_calc(
         u_header_prefix='U_VELOCITY',
         v_header_prefix='V_VELOCITY',
         w_header_prefix='W_VELOCITY',
         ske_header_prefix='KSGS',
+        index_cal='Time',
+        mtr_header_prefix='MTR',
         path_out=None
 ):
 
     path_csv_files = open_files_tk()
 
-    pd_data = read_multi_csv_to_pd(*path_csv_files, header=1, index_col='Time', axis=1)
+    pd_data = read_multi_csv_to_pd(*path_csv_files, header=1, index_col=index_cal, axis=1)
 
     list_devc_names = list(pd_data.columns.values)
     devc_name_digits = []
 
     for devc_name in list_devc_names:
         rep = re.compile('\d+')
-        m = re.search(rep, devc_name)
-        if m:
-            devc_name_digits.append(m.group(0))
+        res = re.findall(rep, devc_name)
+        if res:
+            devc_name_digits.append(res[-1])
 
     devc_name_digits_set = sorted(list(set(devc_name_digits)))
 
     dict_out = {}
 
     for devc_name_digits in devc_name_digits_set:
-        label_u = '{}_{}'.format(u_header_prefix, devc_name_digits)
-        label_v = '{}_{}'.format(v_header_prefix, devc_name_digits)
-        label_w = '{}_{}'.format(w_header_prefix, devc_name_digits)
-        label_k = '{}_{}'.format(ske_header_prefix, devc_name_digits)
 
-        u = pd_data[label_u].values
-        v = pd_data[label_v].values
-        w = pd_data[label_w].values
-        k = pd_data[label_k].values
+        velocity = [
+            pd_data['{}_{}'.format(u_header_prefix, devc_name_digits)].values,
+            pd_data['{}_{}'.format(v_header_prefix, devc_name_digits)].values,
+            pd_data['{}_{}'.format(w_header_prefix, devc_name_digits)].values
+        ]
+        k = pd_data['{}_{}'.format(ske_header_prefix, devc_name_digits)].values
 
-        u_bar = numpy.average(u)
-        v_bar = numpy.average(v)
-        w_bar = numpy.average(w)
 
-        u_ = (u - u_bar) ** 2
-        v_ = (v - v_bar) ** 2
-        w_ = (w - w_bar) ** 2
-
-        tke = u_ + v_ + w_
+        tke = 0
+        for v in velocity:
+            tke += (v - numpy.average(v)) ** 2
         tke *= 0.5
-
         mtr = k / (k + tke)
 
-        dict_out['MTR_{}'.format(devc_name_digits)] = mtr
+        # label_u = '{}_{}'.format(u_header_prefix, devc_name_digits)
+        # label_v = '{}_{}'.format(v_header_prefix, devc_name_digits)
+        # label_w = '{}_{}'.format(w_header_prefix, devc_name_digits)
+        # label_k = '{}_{}'.format(ske_header_prefix, devc_name_digits)
 
-    dict_out['Time'] = pd_data.index
+        # u = pd_data[label_u].values
+        # v = pd_data[label_v].values
+        # w = pd_data[label_w].values
+        # k = pd_data['{}_{}'.format(ske_header_prefix, devc_name_digits)].values
+
+        # u_bar = numpy.average(u)
+        # v_bar = numpy.average(v)
+        # w_bar = numpy.average(w)
+
+        # u_ = (u - u_bar) ** 2
+        # v_ = (v - v_bar) ** 2
+        # w_ = (w - w_bar) ** 2
+
+        # tke = u_ + v_ + w_
+        # tke *= 0.5
+
+        # mtr = k / (k + tke)
+
+        dict_out['{}_{}'.format(mtr_header_prefix, devc_name_digits)] = mtr
+
+    dict_out[index_cal] = pd_data.index
 
     pd_data_new = pandas.DataFrame.from_dict(dict_out).set_index('Time')
 
-    if path_out is None:
-        path_out = filedialog.asksaveasfilename(defaultextension='csv', filetypes=[('csv', ['.csv'])])
-
-    pd_data_new.to_csv(path_out)
-
     return pd_data_new
+
+
+def set_bginfo(
+        path_bginfo_exe,
+        path_bginfo_config_file,
+        int_bginfo_timer=0
+):
+    # str_desktop_info = 'CHI LE MA'
+    # path_bginfo_text_file = r"C:\APP\BGInfo\INFO"
+    # path_bginfo_exe = r"C:\APP\BGInfo\Bginfo.exe"
+    # path_bginfo_config_file = "C:\APP\BGInfo\schedular.bgi"
+    # int_bginfo_timer = 0
+    #
+    # with open(path_bginfo_text_file, 'w') as f:
+    #     f.write(str_desktop_info)
+
+    subprocess.Popen(
+        [path_bginfo_exe, path_bginfo_config_file, r"/timer:{:d}".format(int_bginfo_timer)],
+        stderr=subprocess.STDOUT, stdout=subprocess.PIPE
+    )
+
+
+def input_path(msg):
+        r = input(msg)
+        if r[0] == r[-1] == '"' or r[0] == r[-1] == "'":
+            return os.path.realpath(r[1:-1])
+        else:
+            return os.path.realpath(r)

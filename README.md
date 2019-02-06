@@ -1,12 +1,8 @@
 # fdspy
 
-todo
-
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
-
-Python 3.6.0 or later is required.
+Python 3.6 or later is required.
 
 ### Installation
 
@@ -18,19 +14,19 @@ SfePraPy uses Python, and as of July 2018 SfePraPy only works in Python3.
 
 1.	If you are using Windows with Python version 3.3 or higher, use the [Python Launcher for Windows](https://docs.python.org/3/using/windows.html?highlight=shebang#python-launcher-for-windows) to use `pip` with Python version 3:
     ```bash
-    py -3 -m pip install sfeprapy
+    py -3 -m pip install fdspy
     ```
 2.	If your system has a `python3` command (standard on Unix-like systems), install with:
     ```bash
-    python3 -m pip install sfeprapy
+    python3 -m pip install fdspy
     ```
 3.	You can also just use the `python` command directly, but this will use the _current_ version of Python in your environment:
     ```bash
-    python -m pip install sfeprapy
+    python -m pip install fdspy
     ```
 
 #### Local
-For any reasons you do not want to install `sfeprapy` as a Python library, download the entire project folder to your computer (e.g. Desktop), change current working directory to the project folder then install `sfeprapy` by using pip:
+For any reasons you do not want to install `fdspy` as a Python library, download the entire project folder to your computer (e.g. Desktop), change current working directory to the project folder then install `fdspy` by using pip:
 
 ```bash
 pip install .
@@ -40,16 +36,22 @@ The installation process should be able to install all required libraries listed
 
 ### Usage
 
+#### FDS Job Scheduler
+
+#### Generate Devices in Defined Domain
+
+#### MTR Calculation
+
 To run SfePraPy Monte Carlo simulation app in a terminal window:
 
 ```sh
-python -m sfeprapy.mc
+python -m fdspy.mc
 ```
 
 To run SfePraPy Monte Carlo simulation in python:
 
 ```python
-from sfeprapy.mc.__main__ import run
+from fdspy.mc.__main__ import run
 run()
 ```
 
