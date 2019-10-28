@@ -1,6 +1,7 @@
 from fdspy.cibse_guide_e import _dT_d_dt, _Q, _theta_c, _U
 import seaborn as sns
-sns.set_style("ticks", {'axes.grid': True, })
+
+sns.set_style("ticks", {"axes.grid": True})
 
 
 if __name__ == "__main__":
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     iter_time = enumerate(time)
     next(iter_time)
     for i, t in iter_time:
-        T_d[i] = T_d[i-1] + _dT_d_dt(U[i], T_g[i], T_d[i-1], RTI)
+        T_d[i] = T_d[i - 1] + _dT_d_dt(U[i], T_g[i], T_d[i - 1], RTI)
 
     # RE-EVALUATE FIRE FOR SUPPRESSION ACTIVATION
     Q[T_d >= T_d_activation] = -1
@@ -57,17 +58,22 @@ if __name__ == "__main__":
     T_d[T_d == -1] = np.max(T_d)
     T_g[T_g == -1] = np.max(T_g)
 
-    print("{:25}: {:7.2f} [min]".format("Sprinkler activated at", np.min(time[T_d == np.max(T_d)])/60.))
-    print("{:25}: {:7.2f} [kW]".format("The maximum HRR is", np.max(Q)/1.e3))
+    print(
+        "{:25}: {:7.2f} [min]".format(
+            "Sprinkler activated at", np.min(time[T_d == np.max(T_d)]) / 60.0
+        )
+    )
+    print("{:25}: {:7.2f} [kW]".format("The maximum HRR is", np.max(Q) / 1.0e3))
 
     import matplotlib.pyplot as plt
+
     plt.figure(num=1)
     plt.subplot(211)
-    plt.plot(time/60, Q/1e6, label='HRR')
+    plt.plot(time / 60, Q / 1e6, label="HRR")
     plt.ylabel("Heat Release Rate [MW]")
     plt.subplot(212)
-    plt.plot(time/60, T_g-273.15, label="Temperature (near field)")
-    plt.plot(time/60, T_d-273.15, label="Temperature (sprinkler)")
+    plt.plot(time / 60, T_g - 273.15, label="Temperature (near field)")
+    plt.plot(time / 60, T_d - 273.15, label="Temperature (sprinkler)")
     plt.xlabel("Time [min]")
     plt.ylabel("Temperature [$\degree C$]")
     plt.legend()

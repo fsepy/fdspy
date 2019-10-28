@@ -17,8 +17,8 @@ def generate_xyz(*list_elements):
 
 def generate_devc(id_prefix, quantity, xyz, is_return_list=False):
 
-    id_fmt = '{quantity}_{index:d}'
-    xyz_fmt = '{:.3f},{:.3f},{:.3f}'
+    id_fmt = "{quantity}_{index:d}"
+    xyz_fmt = "{:.3f},{:.3f},{:.3f}"
     str_fmt = "&DEVC ID='{id}', QUANTITY='{quantity}', XYZ={xyz}/"
 
     list_cmd = []
@@ -32,22 +32,22 @@ def generate_devc(id_prefix, quantity, xyz, is_return_list=False):
     if is_return_list:
         return list_cmd
     else:
-        return '\n'.join(list_cmd)
+        return "\n".join(list_cmd)
 
 
 def read_multi_csv_to_pd(*list_path_csv, header=0, index_col=None, axis=0):
     list_pd_data = []
     for path_csv in list_path_csv:
-        list_pd_data.append(pandas.read_csv(
-            filepath_or_buffer=path_csv,
-            header=header,
-            index_col=index_col,
-        ))
+        list_pd_data.append(
+            pandas.read_csv(
+                filepath_or_buffer=path_csv, header=header, index_col=index_col
+            )
+        )
 
     return pandas.concat(list_pd_data, axis=1)
 
 
-def open_files_tk(title='Select Input Files', filetypes=[('csv', ['.csv'])]):
+def open_files_tk(title="Select Input Files", filetypes=[("csv", [".csv"])]):
     root = Tk()
     root.withdraw()
     folder_path = StringVar()
@@ -67,24 +67,26 @@ def open_files_tk(title='Select Input Files', filetypes=[('csv', ['.csv'])]):
 
 
 def mtr_calc(
-        u_header_prefix='U_VELOCITY',
-        v_header_prefix='V_VELOCITY',
-        w_header_prefix='W_VELOCITY',
-        ske_header_prefix='KSGS',
-        index_cal='Time',
-        mtr_header_prefix='MTR',
-        path_out=None
+    u_header_prefix="U_VELOCITY",
+    v_header_prefix="V_VELOCITY",
+    w_header_prefix="W_VELOCITY",
+    ske_header_prefix="KSGS",
+    index_cal="Time",
+    mtr_header_prefix="MTR",
+    path_out=None,
 ):
 
     path_csv_files = open_files_tk()
 
-    pd_data = read_multi_csv_to_pd(*path_csv_files, header=1, index_col=index_cal, axis=1)
+    pd_data = read_multi_csv_to_pd(
+        *path_csv_files, header=1, index_col=index_cal, axis=1
+    )
 
     list_devc_names = list(pd_data.columns.values)
     devc_name_digits = []
 
     for devc_name in list_devc_names:
-        rep = re.compile('\d+')
+        rep = re.compile("\d+")
         res = re.findall(rep, devc_name)
         if res:
             devc_name_digits.append(res[-1])
@@ -96,12 +98,11 @@ def mtr_calc(
     for devc_name_digits in devc_name_digits_set:
 
         velocity = [
-            pd_data['{}_{}'.format(u_header_prefix, devc_name_digits)].values,
-            pd_data['{}_{}'.format(v_header_prefix, devc_name_digits)].values,
-            pd_data['{}_{}'.format(w_header_prefix, devc_name_digits)].values
+            pd_data["{}_{}".format(u_header_prefix, devc_name_digits)].values,
+            pd_data["{}_{}".format(v_header_prefix, devc_name_digits)].values,
+            pd_data["{}_{}".format(w_header_prefix, devc_name_digits)].values,
         ]
-        k = pd_data['{}_{}'.format(ske_header_prefix, devc_name_digits)].values
-
+        k = pd_data["{}_{}".format(ske_header_prefix, devc_name_digits)].values
 
         tke = 0
         for v in velocity:
@@ -132,20 +133,16 @@ def mtr_calc(
 
         # mtr = k / (k + tke)
 
-        dict_out['{}_{}'.format(mtr_header_prefix, devc_name_digits)] = mtr
+        dict_out["{}_{}".format(mtr_header_prefix, devc_name_digits)] = mtr
 
     dict_out[index_cal] = pd_data.index
 
-    pd_data_new = pandas.DataFrame.from_dict(dict_out).set_index('Time')
+    pd_data_new = pandas.DataFrame.from_dict(dict_out).set_index("Time")
 
     return pd_data_new
 
 
-def set_bginfo(
-        path_bginfo_exe,
-        path_bginfo_config_file,
-        int_bginfo_timer=0
-):
+def set_bginfo(path_bginfo_exe, path_bginfo_config_file, int_bginfo_timer=0):
     # str_desktop_info = 'CHI LE MA'
     # path_bginfo_text_file = r"C:\APP\BGInfo\INFO"
     # path_bginfo_exe = r"C:\APP\BGInfo\Bginfo.exe"
@@ -156,14 +153,19 @@ def set_bginfo(
     #     f.write(str_desktop_info)
 
     subprocess.Popen(
-        [path_bginfo_exe, path_bginfo_config_file, r"/timer:{:d}".format(int_bginfo_timer)],
-        stderr=subprocess.STDOUT, stdout=subprocess.PIPE
+        [
+            path_bginfo_exe,
+            path_bginfo_config_file,
+            r"/timer:{:d}".format(int_bginfo_timer),
+        ],
+        stderr=subprocess.STDOUT,
+        stdout=subprocess.PIPE,
     )
 
 
 def input_path(msg):
-        r = input(msg)
-        if r[0] == r[-1] == '"' or r[0] == r[-1] == "'":
-            return os.path.realpath(r[1:-1])
-        else:
-            return os.path.realpath(r)
+    r = input(msg)
+    if r[0] == r[-1] == '"' or r[0] == r[-1] == "'":
+        return os.path.realpath(r[1:-1])
+    else:
+        return os.path.realpath(r)

@@ -2,7 +2,7 @@ from fdspy.func import generate_devc, generate_xyz
 from tkinter import filedialog
 import sys
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import numpy as np
 
     # domain_xyz
@@ -30,28 +30,27 @@ if __name__ == '__main__':
     if x3 > 1:
         xx = np.linspace(x1, x2, x3)
     else:
-        xx = [(x1+x2)/2]
+        xx = [(x1 + x2) / 2]
 
     if y3 > 1:
         yy = np.linspace(y1, y2, y3)
     else:
-        yy = [(y1+y2)/2]
+        yy = [(y1 + y2) / 2]
 
     if z3 > 1:
         zz = np.linspace(z1, z2, z3)
     else:
-        zz = [(z1+z2)/2]
+        zz = [(z1 + z2) / 2]
 
     xyz = generate_xyz(xx, yy, zz)
 
     str_devc = generate_devc(
-        id_prefix=id_prefix,
-        quantity=quantity,
-        xyz=xyz,
-        is_return_list=False
+        id_prefix=id_prefix, quantity=quantity, xyz=xyz, is_return_list=False
     )
 
-    path_out = filedialog.asksaveasfilename(defaultextension='txt', filetypes=[('txt', ['.txt'])])
+    path_out = filedialog.asksaveasfilename(
+        defaultextension="txt", filetypes=[("txt", [".txt"])]
+    )
 
-    with open(path_out, 'w') as f:
+    with open(path_out, "w") as f:
         f.write(str_devc)

@@ -1,24 +1,34 @@
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     from fdspy.func import set_bginfo
     import time
     import os
     import json
-    os.system("title "+"BGINFO ROUTINE")
-    path_fds_queue_file = os.path.join('C:', os.sep, 'APP', 'fdspy', 'fds_queue.json')
 
-    print('bginfo is running...')
+    os.system("title " + "BGINFO ROUTINE")
+    path_fds_queue_file = os.path.join("C:", os.sep, "APP", "fdspy", "fds_queue.json")
+
+    print("bginfo is running...")
     while True:
 
-        path_bginfo_exe = os.path.join('C:', os.sep, 'app', 'bginfo', 'bginfo.exe')
-        path_bginfo_config_file = os.path.join('C:', os.sep, 'app', 'bginfo', 'bginfo_config.bgi')
-        path_bginfo_config_text = os.path.join('C:', os.sep, 'app', 'bginfo', 'bginfo_text')
+        path_bginfo_exe = os.path.join("C:", os.sep, "app", "bginfo", "bginfo.exe")
+        path_bginfo_config_file = os.path.join(
+            "C:", os.sep, "app", "bginfo", "bginfo_config.bgi"
+        )
+        path_bginfo_config_text = os.path.join(
+            "C:", os.sep, "app", "bginfo", "bginfo_text"
+        )
 
         with open(path_fds_queue_file, "r") as f:
             dict_queue = json.load(f)
 
         table_top_boarder = "{uid}{path_fds}{num_omp}{num_mpi}{progress}{status}\n".format(
-            uid="="*7, path_fds="="*20, num_omp="="*7, num_mpi="="*7, progress="="*11, status="="*10
+            uid="=" * 7,
+            path_fds="=" * 20,
+            num_omp="=" * 7,
+            num_mpi="=" * 7,
+            progress="=" * 11,
+            status="=" * 10,
         )
 
         table_header = "{uid:7.7}{path_fds:>20.16}{num_omp:7.7}{num_mpi:7.7}{progress:11.11}{status:10.10}\n".format(
@@ -27,7 +37,7 @@ if __name__ == '__main__':
             num_omp="OMP",
             num_mpi="MPI",
             progress="Progress",
-            status="Status"
+            status="Status",
         )
 
         table_content = ""
@@ -43,12 +53,12 @@ if __name__ == '__main__':
             table_content = "Empty\n"
         table = table_top_boarder + table_header + table_content + table_bottom_boarder
 
-        with open(path_bginfo_config_text, 'w') as f:
+        with open(path_bginfo_config_text, "w") as f:
             f.write(table)
 
         set_bginfo(
             path_bginfo_exe=path_bginfo_exe,
-            path_bginfo_config_file=path_bginfo_config_file
+            path_bginfo_config_file=path_bginfo_config_file,
         )
 
         time.sleep(30)

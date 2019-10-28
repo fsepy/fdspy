@@ -15,8 +15,15 @@ import shutil
 
 class FdsJob(object):
     def __init__(
-            self, uid, path_fds, num_mpi=1, num_omp=1, path_work=None, user='n/a', path_destination=None, **red_kwargs,
-
+        self,
+        uid,
+        path_fds,
+        num_mpi=1,
+        num_omp=1,
+        path_work=None,
+        user="n/a",
+        path_destination=None,
+        **red_kwargs,
     ):
 
         # ASSIGN USER DEFINED PROPERTIES
@@ -33,25 +40,30 @@ class FdsJob(object):
 
         # ASSIGN DERIVED PROPERTIES
 
-        with open(self.path_fds, 'r') as f:
+        with open(self.path_fds, "r") as f:
             self._fds_str = f.read()
         # self._chid = re.compile("'[\S]+'").findall()[0].replace("'", '')
 
-        self._chid = re.compile("'[\S]+'").search(
-            re.compile('CHID=[\s\S]+?[/,]').search(
-                re.compile("&HEAD[\s\S]*?/").search(
-                    self._fds_str
-                ).group(0)
-            ).group(0)
-        ).group(0).replace("'", '')
+        self._chid = (
+            re.compile("'[\S]+'")
+            .search(
+                re.compile("CHID=[\s\S]+?[/,]")
+                .search(re.compile("&HEAD[\s\S]*?/").search(self._fds_str).group(0))
+                .group(0)
+            )
+            .group(0)
+            .replace("'", "")
+        )
 
-        self._uptime = re.compile("[\d.]+").search(
-            re.compile("T_END=[\s\S\d.]*?[,/]").search(
-                re.compile("&TIME[\s\S]*?/").search(
-                    self._fds_str
-                ).group(0)
-            ).group(0)
-        ).group(0)
+        self._uptime = (
+            re.compile("[\d.]+")
+            .search(
+                re.compile("T_END=[\s\S\d.]*?[,/]")
+                .search(re.compile("&TIME[\s\S]*?/").search(self._fds_str).group(0))
+                .group(0)
+            )
+            .group(0)
+        )
 
         self._uptime = float(self._uptime)
 
@@ -62,12 +74,14 @@ class FdsJob(object):
     def run_job(self):
 
         os.chdir(self.path_work)
-        os.environ['OMP_NUM_THREADS'] = '{:d}'.format(self.num_omp)
+        os.environ["OMP_NUM_THREADS"] = "{:d}".format(self.num_omp)
 
         if self.num_mpi == 1:
-            str_cmd = 'fds {}'.format(os.path.basename(self.path_fds))
+            str_cmd = "fds {}".format(os.path.basename(self.path_fds))
         else:
-            str_cmd = 'mpiexec -localonly -n {:d} fds {}'.format(self.num_mpi, os.path.basename(self.path_fds))
+            str_cmd = "mpiexec -localonly -n {:d} fds {}".format(
+                self.num_mpi, os.path.basename(self.path_fds)
+            )
 
         self.sp = subprocess.Popen(
             args=str_cmd,
@@ -76,7 +90,7 @@ class FdsJob(object):
             stderr=subprocess.STDOUT,
             cwd=self.path_work,
             bufsize=-1,
-            close_fds='posix' in sys.builtin_module_names
+            close_fds="posix" in sys.builtin_module_names,
         )
 
     def check_is_live(self):
@@ -87,20 +101,18 @@ class FdsJob(object):
 
     def get_current_progress(self):
 
-        path_out_file = os.path.join(self.path_work, '{}.out'.format(self._chid))
+        path_out_file = os.path.join(self.path_work, "{}.out".format(self._chid))
 
         try:
-            with open(path_out_file, 'r') as f:
+            with open(path_out_file, "r") as f:
                 str_out_file = f.read()
         except FileNotFoundError:
-            str_out_file = ''
+            str_out_file = ""
 
         try:
             self._current_progress = float(
-                re.compile('[\d.]+').findall(
-                    re.compile('Total Time:[\s\S\d.]+?s').findall(
-                        str_out_file
-                    )[-1]
+                re.compile("[\d.]+").findall(
+                    re.compile("Total Time:[\s\S\d.]+?s").findall(str_out_file)[-1]
                 )[-1]
             )
         except IndexError:
@@ -110,7 +122,10 @@ class FdsJob(object):
 
     def copy_files(self):
         if self.path_destination:
-            shutil.copytree(self.path_work, os.path.join(self.path_destination, os.path.basename(self.path_work)))
+            shutil.copytree(
+                self.path_work,
+                os.path.join(self.path_destination, os.path.basename(self.path_work)),
+            )
 
 
 class ClientAgentBack(object):
@@ -123,7 +138,7 @@ class ClientAgentBack(object):
         self._count_cpu_cores_used = 0
         self._list_FdsJob = []
 
-    def start(self, time_wait=30.):
+    def start(self, time_wait=30.0):
 
         while True:
             self.update_queue()
@@ -144,8 +159,10 @@ class ClientAgentBack(object):
             fds_job_config = fds_queue_pending[fds_job_config_key_next]
 
             # RUN FDS JOB IF ENOUGH RESOURCE
-            count_pt = fds_job_config['num_omp'] * fds_job_config['num_mpi']
-            count_cpu_available = self.count_cpu_cores_available - self._count_cpu_cores_used
+            count_pt = fds_job_config["num_omp"] * fds_job_config["num_mpi"]
+            count_cpu_available = (
+                self.count_cpu_cores_available - self._count_cpu_cores_used
+            )
             if count_cpu_available >= count_pt:
                 print("available cpu:", count_cpu_available)
                 print("required cpu:", count_pt)
@@ -159,48 +176,56 @@ class ClientAgentBack(object):
             time.sleep(time_wait)
 
     def queue_read(self):
-        with open(self.path_fds_queue_json, 'r') as f:
+        with open(self.path_fds_queue_json, "r") as f:
             j = json.load(f)
         return j
 
-    def update_queue(self, uid=None, path_fds=None, num_omp=None, num_mpi=None, progress=None, status=None):
+    def update_queue(
+        self,
+        uid=None,
+        path_fds=None,
+        num_omp=None,
+        num_mpi=None,
+        progress=None,
+        status=None,
+    ):
         j = self.queue_read()
 
         if uid:
             if path_fds:
-                j[uid]['path_fds'] = path_fds
+                j[uid]["path_fds"] = path_fds
             if num_omp:
-                j[uid]['num_omp'] = num_omp
+                j[uid]["num_omp"] = num_omp
             if num_mpi:
-                j[uid]['num_mpi'] = num_mpi
+                j[uid]["num_mpi"] = num_mpi
             if progress:
-                j[uid]['progress'] = progress
+                j[uid]["progress"] = progress
             if status:
-                j[uid]['status'] = status
+                j[uid]["status"] = status
 
         count_tc = 0
         for i, FdsJob in enumerate(self._list_FdsJob):
             if FdsJob.check_is_live():
-                count_tc += (FdsJob.num_omp * FdsJob.num_mpi)
-                j[FdsJob.uid]['progress'] = FdsJob.get_current_progress()
+                count_tc += FdsJob.num_omp * FdsJob.num_mpi
+                j[FdsJob.uid]["progress"] = FdsJob.get_current_progress()
             else:
-                j[FdsJob.uid]['status'] = 2
+                j[FdsJob.uid]["status"] = 2
                 FdsJob.copy_files()
                 del self._list_FdsJob[i]
-            j[FdsJob.uid]['progress'] = FdsJob.get_current_progress()
+            j[FdsJob.uid]["progress"] = FdsJob.get_current_progress()
 
         # UPDATE LIVE JOB COUNT
         self._count_live_jobs = len(self._list_FdsJob)
         self._count_cpu_cores_used = count_tc
 
-        with open(self.path_fds_queue_json, 'w') as f:
+        with open(self.path_fds_queue_json, "w") as f:
             json.dump(j, f, indent=4)
 
     def queue_status(self, status):
         q = self.queue_read()
         q_ = copy.copy(q)
         for k, v in q.items():
-            if v['status'] != status:
+            if v["status"] != status:
                 del q_[k]
 
         return q_
@@ -219,7 +244,6 @@ class ClientAgentFront(object):
             "status": None,
         }
 
-
     def start(self):
         while True:
             cmd = input(">>>")
@@ -236,7 +260,7 @@ class ClientAgentFront(object):
     def queue_append(self):
         dict_queue = self.queue_read()
         if len(dict_queue) > 0:
-            uid = "{:d}".format(int(list(dict_queue)[-1])+1)
+            uid = "{:d}".format(int(list(dict_queue)[-1]) + 1)
         else:
             uid = 0
 
@@ -246,7 +270,9 @@ class ClientAgentFront(object):
         dict_queue[uid]["num_mpi"] = int(input("Number of MPI processes: "))
         dict_queue[uid]["progress"] = 0
         dict_queue[uid]["status"] = 0
-        dict_queue[uid]["path_destination"] = self._input_path("Drop destination folder: ")
+        dict_queue[uid]["path_destination"] = self._input_path(
+            "Drop destination folder: "
+        )
 
         return dict_queue
 
@@ -274,7 +300,7 @@ class ClientAgentFront(object):
             return os.path.realpath(r)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     # CA = ClientAgentBack(
     #     path_fds_queue=r"C:\Users\ian\Desktop\fdspy_test\fds_batch.json",
