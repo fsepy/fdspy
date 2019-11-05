@@ -102,13 +102,21 @@ def fds2dict(fds: str):
     return dict_from_fds
 
 
-def fds2dict_input_parameters():
-    input = r"&DEVC ID='FLOW + stair_lobby_door', QUANTITY='VOLUME FLOW +', XB=5.1,6.7,-22.1,-22.1,8.5,10.5/"
+def fds2dict_input_parameters(line: str = None):
+    line = r"&OBST ID='1.25 1.4', XB=2.7,4.1,-15.4,-14.0,8.5,8.6, SURF_IDS='1MW 1.2','INERT','INERT'/ "
 
-    res = re.findall(r"[\s|,]+[\w]+=([\S ]+?)[=|/]", input)
+    res = re.split(r"(\w+ *=)", line)
 
+    # res = re.findall(r"[\s|,]+[\w]+=([\S ]+?)[, a-zA-Z_]*[=|/]", line)
+
+    # res = re.findall(r"= *([0-9\.\,\-\'\"a-zA-Z_ ]+)", line)
+    # res = re.sub(r"= *([\w\,\.\-]+)", "\1", line)
+
+    # res = re.findall(r"([\w]+ *= *.+?)[,]", line)
+
+    for i in res:
+        print(i)
     print(res)
-
 
 if __name__ == '__main__':
 
