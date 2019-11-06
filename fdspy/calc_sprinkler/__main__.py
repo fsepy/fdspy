@@ -12,10 +12,10 @@ if __name__ == "__main__":
     time_end = 10 * 60
 
     alpha = 0.0117e3  # [W/s2]
-    r = 2.8  # Estimation
-    h = 2.6
-    RTI = 130
-    T_d_activation = 273.15 + 57  # [K]
+    r = 5.5/2  # Estimation
+    h = 2.8
+    RTI = 50
+    T_d_activation = 273.15 + 77  # [K]
 
     # time_end = float(input("Time end [min]: ")) * 60
     # alpha = float(input("Alpha (growth factor) [W/s2]: "))

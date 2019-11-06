@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """
+LIMITATIONS
+===========
+
+FDS parameters with array feature are ignored.
+i.e. MALT(1,1), anything parameter followed with (#).
 
 """
 
 import re
 import copy
 import warnings
+import pandas as pd
 
 
 class FDS2Dict:
@@ -44,10 +50,6 @@ def all_fds_groups_in_a_list(fds_manual_latex: str = None):
     return out
 
 
-def test_fds_groups_in_a_list():
-    assert len(all_fds_groups_in_a_list()) == 36
-
-
 def all_fds_input_parameters_in_a_list(fds_manual_latex: str = None):
     """Get an exhausted list of input parameters for all groups in Fire Dynamics Simulator.
 
@@ -57,6 +59,7 @@ def all_fds_input_parameters_in_a_list(fds_manual_latex: str = None):
 
     # Parse input, i.e. the manual latex source code
     # ==============================================
+
     if fds_manual_latex is None:
         from fdspy.preprocessor import FDS_MANUAL_CHAPTER_LIST_OF_INPUT_PARAMETERS as _
         fds_manual_latex = _
@@ -85,10 +88,6 @@ def all_fds_input_parameters_in_a_list(fds_manual_latex: str = None):
     fds_manual_latex = sorted(list(set(fds_manual_latex)))
 
     return fds_manual_latex
-
-
-def test_all_fds_input_parameters_in_a_list():
-    assert len(all_fds_input_parameters_in_a_list()) == 652
 
 
 def fds2list(fds_script: str, default_param_dict: dict = None):
@@ -140,6 +139,54 @@ def fds2list2(fds_script: str, default_param_list: list):
     return list_from_fds
 
 
+def fds2list3(fds_script: str, default_fds_param_list: list = None):
+
+    fds_command_list = re.findall(r'&[\s\S]*?/', fds_script)
+
+    # MAKE A LIST OF PARAMETER NAMES (i.e. ALL POSSIBLE FDS PARAMETERS)
+    # =================================================================
+
+    fds_command_parameterised_list = list()
+    if default_fds_param_list is None:
+        fds_param_list_all = list()
+        for i in fds_command_list:
+            fds_group_param_val = fds2dict_parameterise_single_fds_command(i)
+            fds_command_parameterised_list.append(fds_group_param_val)
+            for j in list(range(len(fds_group_param_val)))[1::2]:
+                if '(' in fds_group_param_val[j]:
+                    continue
+                fds_param_list_all.extend([fds_group_param_val[j]])
+        fds_param_list_all += ['_GROUP']
+        fds_param_list_all = sorted(list(set(fds_param_list_all)))
+    else:
+        fds_param_list_all = copy.copy(default_fds_param_list)
+        fds_command_parameterised_list = [fds2dict_parameterise_single_fds_command(i) for i in fds_command_list]
+
+    #
+
+    fds_param_list_out = list()  # to store all parameterised fds commands.
+
+    # to check length
+    if len(fds_command_list) != len(fds_command_parameterised_list):
+        raise ValueError("Length of `fds_command_list` and `fds_command_parameterised_list` not equal.")
+
+    for i, v in enumerate(fds_command_list):
+
+        fds_group_param_val = fds_command_parameterised_list[i]
+
+        # to work out parameterised fds command (single line) in one-hot format.
+        fds_parameterised_liner = [None] * len(fds_param_list_all)
+        fds_parameterised_liner[fds_param_list_all.index('_GROUP')] = fds_group_param_val[0]
+        for j in list(range(len(fds_group_param_val)))[1::2]:
+            if '(' in fds_group_param_val[j]:  # ignore array format FDS parameters, i.e. MALT(1,1)
+                continue
+            fds_parameterised_liner[fds_param_list_all.index(fds_group_param_val[j])] = fds_group_param_val[j+1]
+
+        fds_param_list_out.append(fds_parameterised_liner)
+
+    return fds_param_list_out, fds_param_list_all
+
+
 def fds2dict_parameterise_single_fds_command(line: str):
     """Converts a single FDS command in to a list [group_name, parameter1, value1, parameter2, value2, ...]
 
@@ -169,7 +216,6 @@ def fds2dict_parameterise_single_fds_command(line: str):
     else:
         group_name = group_name[0]
     # remove group_name from the line
-    # line = line.replace(group_name, "").strip()
     line = re.sub(r"^\w+ ", "", line)
 
     # SPLIT TO [parameter, value, parameter, value ...]
@@ -190,63 +236,59 @@ def fds2dict_parameterise_single_fds_command(line: str):
     return [group_name] + line
 
 
-def test_fds2dict_parameterise_single_fds_command():
-    from fdspy.preprocessor.fds2dict import fds2dict_parameterise_single_fds_command as ff
+def test_fds2list3():
+    import pprint
 
-    def fff(line_):
-        line_ = fds2dict_parameterise_single_fds_command(line_)
-        if isinstance(line_, list):
-            return len(line_)
-        elif line_ is None:
-            return None
+    import pandas as pd
+    from fdspy.preprocessor import EXAMPLE_FDS_SCRIPT_RIU_MOE1
+    l0, l1 = fds2list3(EXAMPLE_FDS_SCRIPT_RIU_MOE1)
+    d = {i: v for i, v in enumerate(l0)}
+    df = pd.DataFrame.from_dict(d, orient='index', columns=l1)
+    pprint.pprint(df[df['_GROUP'] == 'RAMP'].dropna(axis=1))
 
-    line = r"&HEAD CHID='moe1'/"
-    assert fff(line) == 3
-    line = r"&TIME T_END=400.0, RESTRICT_TIME_STEP=.FALSE./"
-    assert fff(line) == 5
-    line = r"&MESH ID='stair upper02', IJK=7,15,82, XB=4.2,4.9,-22.0,-20.5,11.1,19.3, MPI_PROCESS=0/"
-    assert fff(line) == 9
-    line = r"""
-    &PART ID='Tracer',
-          MASSLESS=.TRUE.,
-          MONODISPERSE=.TRUE.,
-          AGE=60.0/"""
-    assert fff(line) == 9
-    line = r"&CTRL ID='invert', FUNCTION_TYPE='ALL', LATCH=.FALSE., INITIAL_STATE=.TRUE., INPUT_ID='ventilation'/"
-    assert fff(line) == 11
-    line = r"&HOLE ID='door - stair_bottom', XB=3.0,3.4,-23.1,-22.3,4.9,6.9/ "
-    assert fff(line) == 5
-    line = r"&SLCF QUANTITY='TEMPERATURE', VECTOR=.TRUE., PBX=3.4/"
-    assert fff(line) == 7
-    line = r"&TAIL /"
-    assert fff(line) == 1
-    line = r"""
-    &SURF ID='LINING CONCRETE',
-          COLOR='GRAY 80',
-          BACKING='VOID',
-          MATL_ID(1,1)='CONCRETE',
-          MATL_MASS_FRACTION(1,1)=1.0,
-          THICKNESS(1)=0.2/
-    """
-    assert fff(line) == 13
-    line = r"""&TIME T_END=400.0, RESTRICT_TIME_STEP=.FALSE./"""
-    assert ff(line)[3] == 'RESTRICT_TIME_STEP'
+
+def test_fds2list2():
+
+    import pprint
+    import pandas as pd
+    from fdspy.preprocessor import EXAMPLE_FDS_SCRIPT_RIU_MOE1
+    out = fds2list2(EXAMPLE_FDS_SCRIPT_RIU_MOE1, ['_GROUP']+all_fds_input_parameters_in_a_list())
+    # pprint.pprint(out, indent=1, width=80)
+    out = {i: v for i, v in enumerate(out)}
+    out2 = pd.DataFrame.from_dict(out, orient='index', columns=['_GROUP']+all_fds_input_parameters_in_a_list())
+    pprint.pprint(out2[out2['_GROUP'] == 'RAMP'].dropna(axis=1))
+
+
+def fds_analyser_hrr(df: pd.DataFrame):
+
+    """&SURF ID='BURNER 1MW 1.2m',
+      COLOR='RED',
+      HRRPUA=510.0,
+      TAU_Q=-288.0,
+      PART_ID='Tracer',
+      DT_INSERT=0.5/"""
+
+    a = df[df['HRRPUA']!=None]
+
+    pass
+
+
+def fds_analyser_slc(df: pd.DataFrame):
+    # total no. of slc
+    pass
+
+
+def fds_analyser_general(df: pd.DataFrame):
+    # no. of commands
+    # no. of group
+    # no. of parameters (inc. commands)
+    pass
+
+
+def fds_analyser_fire():
+    pass
 
 
 if __name__ == '__main__':
 
-    import pprint
-    from fdspy.preprocessor import EXAMPLE_FDS_SCRIPT_RIU_MOE1
-
-    # out = fds2list(EXAMPLE_FDS_SCRIPT_RIU_MOE1, {i: None for i in all_fds_input_parameters_in_a_list()})
-    # pprint.pprint(out, indent=1, width=80)
-
-    out = fds2list2(EXAMPLE_FDS_SCRIPT_RIU_MOE1, ['_GROUP']+all_fds_input_parameters_in_a_list())
-    # pprint.pprint(out, indent=1, width=80)
-    out = {i:v for i,v in enumerate(out)}
-    import pandas as pd
-    out2 = pd.DataFrame.from_dict(out, orient='index', columns=['_GROUP']+all_fds_input_parameters_in_a_list())
-    pprint.pprint(out2[out2['_GROUP']=='RAMP'].dropna(axis=1))
-
-    # test_fds_groups_in_a_list()
-    # test_fds2dict_parameterise_single_fds_command()
+    test_fds2list3()
