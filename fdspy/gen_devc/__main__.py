@@ -1,6 +1,5 @@
-from fdspy.func import generate_devc, generate_xyz
+from fdspy.lib.func import generate_devc, generate_xyz
 from tkinter import filedialog
-import sys
 
 if __name__ == "__main__":
     import numpy as np

@@ -1,6 +1,6 @@
 if __name__ == "__main__":
 
-    from fdspy.func import set_bginfo
+    from fdspy.lib.func import set_bginfo
     import time
     import os
     import json

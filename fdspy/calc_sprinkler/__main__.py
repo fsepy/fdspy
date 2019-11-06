@@ -1,4 +1,4 @@
-from fdspy.cibse_guide_e import _dT_d_dt, _Q, _theta_c, _U
+from fdspy.lib.cibse_guide_e import _dT_d_dt, _Q, _theta_c, _U
 import seaborn as sns
 sns.set_style("ticks", {'axes.grid': True, })
 

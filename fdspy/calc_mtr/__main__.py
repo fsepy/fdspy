@@ -1,4 +1,4 @@
-from fdspy.func import mtr_calc
+from fdspy.lib.func import mtr_calc
 from tkinter import filedialog
 
 if __name__ == "__main__":

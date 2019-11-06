@@ -1,7 +1,7 @@
 if __name__ == "__main__":
 
     from fdspy.fds_cls import ClientAgentBack
-    from fdspy.func import input_path
+    from fdspy.lib.func import input_path
     import os
 
     os.system("title " + "FDS BACK")

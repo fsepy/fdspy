@@ -7,13 +7,17 @@ LIMITATIONS
 FDS parameters with array feature are ignored.
 i.e. MALT(1,1), anything parameter followed with (#).
 
+Does not support multiple fires, only supports multiple (redundant) SURF group.
+&SURF ID='Burner', COLOR='RED', TMP_FRONT=500. HRRPUA=2672., RAMP_Q='Burner_RAMP_Q'/
+&OBST XB=49.00,51.00,3.80,4.80,0.00,0.40, SURF_IDS='Burner','Steel pool','Steel pool'/
 """
 
 import re
 import copy
 import warnings
 import pandas as pd
-
+import numpy as np
+import plotly.express as pex
 
 class FDS2Dict:
     pass
@@ -228,9 +232,7 @@ def fds2dict_parameterise_single_fds_command(line: str):
         v = v.strip()
         v = rep.sub("", v)
         line[i] = v
-    if len(line) == 0:
-        warnings.warn("No parameters found.")
-    elif len(line) % 2 != 0:
+    if len(line) % 2 != 0:
         raise ValueError("Not always in `parameter, value` pairs.")
 
     return [group_name] + line
@@ -238,9 +240,9 @@ def fds2dict_parameterise_single_fds_command(line: str):
 
 def test_fds2list3():
     import pprint
-
     import pandas as pd
-    from fdspy.preprocessor import EXAMPLE_FDS_SCRIPT_RIU_MOE1
+    from fdspy.lib.fds2dict_data import EXAMPLE_FDS_SCRIPT_RIU_MOE1
+
     l0, l1 = fds2list3(EXAMPLE_FDS_SCRIPT_RIU_MOE1)
     d = {i: v for i, v in enumerate(l0)}
     df = pd.DataFrame.from_dict(d, orient='index', columns=l1)
@@ -251,15 +253,30 @@ def test_fds2list2():
 
     import pprint
     import pandas as pd
-    from fdspy.preprocessor import EXAMPLE_FDS_SCRIPT_RIU_MOE1
+    from fdspy.lib.fds2dict_data import EXAMPLE_FDS_SCRIPT_RIU_MOE1
+
     out = fds2list2(EXAMPLE_FDS_SCRIPT_RIU_MOE1, ['_GROUP']+all_fds_input_parameters_in_a_list())
-    # pprint.pprint(out, indent=1, width=80)
     out = {i: v for i, v in enumerate(out)}
     out2 = pd.DataFrame.from_dict(out, orient='index', columns=['_GROUP']+all_fds_input_parameters_in_a_list())
     pprint.pprint(out2[out2['_GROUP'] == 'RAMP'].dropna(axis=1))
 
 
-def fds_analyser_hrr(df: pd.DataFrame):
+def fds_analyser(df: pd.DataFrame = None):
+
+    import pprint
+    import pandas as pd
+    from fdspy.lib.fds2dict_data import EXAMPLE_FDS_SCRIPT_RIU_MOE1
+    from fdspy.lib.fds2dict_data import EXAMPLE_FDS_SCRIPT_ARUP_TUNNEL_FIRE
+
+    l0, l1 = fds2list3(EXAMPLE_FDS_SCRIPT_ARUP_TUNNEL_FIRE)
+    d = {i: v for i, v in enumerate(l0)}
+    df = pd.DataFrame.from_dict(d, orient='index', columns=l1)
+
+    print(fds_analyser_general(df))
+    fds_analyser_hrr(df).show()
+
+
+def fds_analyser_hrr(df: pd.DataFrame) -> pex:
 
     """&SURF ID='BURNER 1MW 1.2m',
       COLOR='RED',
@@ -268,21 +285,107 @@ def fds_analyser_hrr(df: pd.DataFrame):
       PART_ID='Tracer',
       DT_INSERT=0.5/"""
 
-    a = df[df['HRRPUA']!=None]
+    # Filter items with `_GROUP` == `SURF` and has `HRRPUA` value
 
-    pass
+    df2 = copy.copy(df)
+    df2 = df2[df2['_GROUP'] == 'SURF']
+    df2 = df2[df2['HRRPUA'].notnull()]
+    df2.dropna(axis=1, inplace=True)
 
+    # Make the above a list
 
-def fds_analyser_slc(df: pd.DataFrame):
-    # total no. of slc
-    pass
+    list_dict_surf_hrrpua = list()
+    for i, v in df2.iterrows():
+        list_dict_surf_hrrpua.append(v.to_dict())
+
+    for dict_surf_hrrpua in list_dict_surf_hrrpua:
+
+        id = dict_surf_hrrpua['ID'].replace('"', '').replace("'", '')
+        list_dict_obst = list()
+
+        df3 = copy.copy(df)  # used to filter obst linked to the surf_hrrpua
+        df3 = df3[df3['SURF_IDS'].notnull()]
+        df3 = df3[df3['SURF_IDS'].str.contains(id)]
+        df3.dropna(axis=1, inplace=True)
+        for i, v in df3.iterrows():
+            dict_obst = v.to_dict()
+
+            if dict_obst['_GROUP'] != 'OBST':
+                raise ValueError('Only `SURF` with `HRRPUA` assigned to `OBST` with `SURF_IDS` is supported.')
+
+            # Calculate fire area
+            # -------------------
+            # identify which index the surf is assigned to
+            obst_surf_ids = dict_obst['SURF_IDS']
+            i_assigned = -1
+            for i_assigned, v_ in enumerate(obst_surf_ids.split(',')):
+                if id in v_:
+                    break
+            if i_assigned == 1 or i_assigned < 0:  # only supports surf assigned to top or bottom
+                raise ValueError('`SURF` with `HRRPUA` can not assigned to sides in `SURF_IDS`.')
+
+            # work out area
+            x1, x2, y1, y2, z1, z2 = [float(_) for _ in dict_obst['XB'].split(',')]
+            dx, dy, dz = abs(x2-x1), abs(y2-y1), abs(z2-z1)
+            area = dx * dy
+
+            # Calculate HRRPUA
+            # ----------------
+            hrrpua = float(dict_surf_hrrpua['HRRPUA'])
+
+            # Calculate hrr against time curve
+            # --------------------------------
+            df4 = copy.copy(df)
+            df4 = df4[df4['T_END'].notna()]
+            df4.dropna(axis=1, inplace=True)
+            time_array = np.arange(0, float(list(df4['T_END'])[0])+1, 1)
+            hrr_frac_array = None
+            hrr_array = None
+            print(dict_surf_hrrpua)
+            if 'TAU_Q' in dict_surf_hrrpua.keys():
+                tau_q = float(dict_surf_hrrpua['TAU_Q'])
+                if tau_q > 0:
+                    hrr_frac_array = np.tanh(time_array / tau_q)
+                elif tau_q < 0:
+                    hrr_frac_array = (time_array / tau_q) ** 2
+                else:
+                    raise ValueError('TAU_Q is zero, not good.')
+                hrr_frac_array[hrr_frac_array > 1] = 1
+                hrr_array = hrr_frac_array * area * hrrpua
+            elif 'RAMP_Q' in dict_surf_hrrpua.keys():
+                ramp_q = dict_surf_hrrpua['RAMP_Q']
+
+                df5 = df[df['_GROUP'] == 'RAMP']
+                df5 = df5[df5['ID'] == ramp_q]
+                df5 = df5.dropna(axis=1)
+
+                time_raw = df5['T'].astype(float).values
+                frac_raw = df5['F'].astype(float).values
+                frac_raw = frac_raw[np.argsort(time_raw)]
+                time_raw = np.sort(time_raw)
+
+                hrr_frac_array = np.interp(time_array, time_raw, frac_raw)
+                hrr_array = hrr_frac_array * area * hrrpua
+            else:
+                raise NotImplemented('Only TAU_Q and RAMP_Q are currently supported.')
+
+    fig = pex.line(x=time_array, y=hrr_array)
+
+    return fig
 
 
 def fds_analyser_general(df: pd.DataFrame):
-    # no. of commands
-    # no. of group
-    # no. of parameters (inc. commands)
-    pass
+    import collections
+
+    sf = '{:<40.40} {}'  # format
+    d = collections.OrderedDict()  # to collect results statistics
+
+    d['total number of commands'] = len(df)
+    d['total number of unique groups'] = len(list(set(list(df['_GROUP']))))
+    d['total number of unique parameters'] = len(df.columns) - 1
+    d['total number of slices'] = len(df[df['_GROUP'] == 'SLCF'])
+
+    return '\n'.join([sf.format(i, v) for i, v in d.items()])
 
 
 def fds_analyser_fire():
@@ -291,4 +394,4 @@ def fds_analyser_fire():
 
 if __name__ == '__main__':
 
-    test_fds2list3()
+    fds_analyser()
