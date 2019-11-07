@@ -12,14 +12,16 @@ Does not support multiple fires, only supports multiple (redundant) SURF group.
 &OBST XB=49.00,51.00,3.80,4.80,0.00,0.40, SURF_IDS='Burner','Steel pool','Steel pool'/
 """
 
+import os
 import re
 import copy
-import warnings
-import pandas as pd
-import numpy as np
-import plotly
-import plotly.express as pex
 
+import numpy as np
+import pandas as pd
+import plotly
+import plotly.io
+import plotly.express as pex
+import plotly.graph_objects as go
 
 class FDS2Dict:
     pass
@@ -295,7 +297,11 @@ def fds_analyser(df: pd.DataFrame):
     # HRR curve
     # =========
 
-    fds_analyser_hrr(df).show()
+    fig = fds_analyser_hrr(df)
+
+    config = {"scrollZoom": False, "displayModeBar": True, "editable": True, "showLink": False, "displaylogo": False,}
+
+    plotly.io.write_html(fig, file='fire.html', auto_open=True, config=config)
 
 
 def fds_analyser_hrr(df: pd.DataFrame) -> pex:
@@ -396,7 +402,64 @@ def fds_analyser_hrr(df: pd.DataFrame) -> pex:
             else:
                 raise NotImplemented("Only TAU_Q and RAMP_Q are currently supported.")
 
-    fig = pex.line(x=time_array, y=hrr_array, labels=dict(x="Time [s]", y="HRR [kW]"))
+    fig = pex.line(x=time_array, y=hrr_array, labels=dict(x="Time [s]", y="HRR [kW]"), height=None, width=800)
+
+    return fig
+
+
+def _lib_make_figure(x, y, x_label, y_label):
+
+    fig = go.Figure()
+
+    # add individual time equivalence to the plot
+    fig.add_trace(go.Scatter(x=x, y=y, mode="lines"))
+
+    fig.update_layout(
+        autosize=True,
+        paper_bgcolor="White",
+        plot_bgcolor="White",
+        xaxis=dict(
+            title=x_label,
+            dtick=60,
+            range=None,
+            showline=True,
+            linewidth=1,
+            linecolor="black",
+            mirror=True,
+            visible=True,
+            showgrid=True,
+            gridcolor="Black",
+            gridwidth=1,
+            ticks="outside",
+            zeroline=False,
+        ),
+        yaxis=dict(
+            title=y_label,
+            # dtick=100,
+            range=None,
+            showline=True,
+            linewidth=1,
+            linecolor="black",
+            mirror=True,
+            visible=True,
+            showgrid=True,
+            gridcolor="Black",
+            gridwidth=1,
+            ticks="outside",
+            zeroline=False,
+        ),
+        # legend=dict(
+        #     x=0.98,
+        #     xanchor="right",
+        #     y=0.02,
+        #     yanchor="bottom",
+        #     traceorder="normal",
+        #     font=dict(family="sans-serif", color="black"),
+        #     bgcolor="White",
+        #     bordercolor="Black",
+        #     borderwidth=1,
+        # ),
+    )
 
     return fig
 
