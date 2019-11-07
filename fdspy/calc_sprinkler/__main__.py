@@ -1,6 +1,7 @@
 from fdspy.lib.cibse_guide_e import _dT_d_dt, _Q, _theta_c, _U
 import seaborn as sns
-sns.set_style("ticks", {'axes.grid': True, })
+
+sns.set_style("ticks", {"axes.grid": True,})
 
 
 if __name__ == "__main__":
@@ -12,7 +13,7 @@ if __name__ == "__main__":
     time_end = 10 * 60
 
     alpha = 0.0117e3  # [W/s2]
-    r = 5.5/2  # Estimation
+    r = 5.5 / 2  # Estimation
     h = 2.8
     RTI = 50
     T_d_activation = 273.15 + 77  # [K]
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     iter_time = enumerate(time)
     next(iter_time)
     for i, t in iter_time:
-        T_d[i] = T_d[i-1] + _dT_d_dt(U[i], T_g[i], T_d[i-1], RTI)
+        T_d[i] = T_d[i - 1] + _dT_d_dt(U[i], T_g[i], T_d[i - 1], RTI)
 
     # RE-EVALUATE FIRE FOR SUPPRESSION ACTIVATION
     Q[T_d >= T_d_activation] = -1
@@ -57,21 +58,24 @@ if __name__ == "__main__":
     T_d[T_d == -1] = np.max(T_d)
     T_g[T_g == -1] = np.max(T_g)
 
-    print("{:25}: {:7.2f} [min]".format(
-        "Sprinkler activated at", np.min(time[T_d == np.max(T_d)])/60.))
-    print("{:25}: {:7.2f} [kW]".format("The maximum HRR is", np.max(Q)/1.e3))
+    print(
+        "{:25}: {:7.2f} [min]".format(
+            "Sprinkler activated at", np.min(time[T_d == np.max(T_d)]) / 60.0
+        )
+    )
+    print("{:25}: {:7.2f} [kW]".format("The maximum HRR is", np.max(Q) / 1.0e3))
 
     import matplotlib.pyplot as plt
     import seaborn as sns
-    sns.set_style('white', {'axes.grid': True,
-                            'grid.linestyle': ':', 'grid.color': '0.5', })
-    sns.set_context('paper')
-    fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(3.5, 3.5), sharex='all')
-    ax1.plot(time / 60, T_g - 273.15,
-             label="Temperature (near field)", ls='-', c='k')
-    ax1.plot(time / 60, T_d - 273.15,
-             label="Temperature (sprinkler)", ls='--', c='k')
-    ax0.plot(time / 60, Q / 1e6, ls='-', c='k', label='HRR')
+
+    sns.set_style(
+        "white", {"axes.grid": True, "grid.linestyle": ":", "grid.color": "0.5",}
+    )
+    sns.set_context("paper")
+    fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(3.5, 3.5), sharex="all")
+    ax1.plot(time / 60, T_g - 273.15, label="Temperature (near field)", ls="-", c="k")
+    ax1.plot(time / 60, T_d - 273.15, label="Temperature (sprinkler)", ls="--", c="k")
+    ax0.plot(time / 60, Q / 1e6, ls="-", c="k", label="HRR")
     # plt.figure(num=1)
     # plt.subplot(211)
     # plt.plot(time/60, Q/1e6, label='HRR')

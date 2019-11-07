@@ -17,7 +17,9 @@ import copy
 import warnings
 import pandas as pd
 import numpy as np
+import plotly
 import plotly.express as pex
+
 
 class FDS2Dict:
     pass
@@ -29,6 +31,7 @@ def all_fds_groups_in_a_list(fds_manual_latex: str = None):
     # ==============================================
     if fds_manual_latex is None:
         from fdspy.preprocessor import FDS_MANUAL_TABLE_GROUP_NAMELIST as _
+
         out = _
     else:
         out = fds_manual_latex
@@ -45,7 +48,7 @@ def all_fds_groups_in_a_list(fds_manual_latex: str = None):
     # remove multiple \n or \r, step 2 - remove empty lines
     out = list(filter(None, out))
     # remove multiple \n or \r, step 3 - restore to a single string
-    out = '\n'.join(out)
+    out = "\n".join(out)
     # find all possible FDS input parameters
     out = re.findall(r"\n{ct\s([\w]*)[(\}]", out)
     # filter out duplicated and sort all the items
@@ -66,6 +69,7 @@ def all_fds_input_parameters_in_a_list(fds_manual_latex: str = None):
 
     if fds_manual_latex is None:
         from fdspy.preprocessor import FDS_MANUAL_CHAPTER_LIST_OF_INPUT_PARAMETERS as _
+
         fds_manual_latex = _
     else:
         fds_manual_latex = fds_manual_latex
@@ -85,9 +89,13 @@ def all_fds_input_parameters_in_a_list(fds_manual_latex: str = None):
     # remove multiple \n or \r, step 2 - remove empty lines
     fds_manual_latex = list(filter(None, fds_manual_latex))
     # remove multiple \n or \r, step 3 - restore to a single string
-    fds_manual_latex = '\n'.join(fds_manual_latex)
+    fds_manual_latex = "\n".join(fds_manual_latex)
     # find all possible FDS input parameters
-    fds_manual_latex = re.findall(r"\n{ct\s([\w]+)[(\} *,]", fds_manual_latex) + ['PBY', 'PBZ', 'FYI']
+    fds_manual_latex = re.findall(r"\n{ct\s([\w]+)[(\} *,]", fds_manual_latex) + [
+        "PBY",
+        "PBZ",
+        "FYI",
+    ]
     # filter fds_manual_latex duplicated and sort all the items
     fds_manual_latex = sorted(list(set(fds_manual_latex)))
 
@@ -96,7 +104,7 @@ def all_fds_input_parameters_in_a_list(fds_manual_latex: str = None):
 
 def fds2list(fds_script: str, default_param_dict: dict = None):
 
-    res = re.findall(r'&[\s\S]*?/', fds_script)
+    res = re.findall(r"&[\s\S]*?/", fds_script)
 
     list_from_fds = list()
     for i, v in enumerate(res):
@@ -109,10 +117,10 @@ def fds2list(fds_script: str, default_param_dict: dict = None):
 
         group_param_val = fds2dict_parameterise_single_fds_command(v)
 
-        dict_from_fds_one_line['_GROUP'] = group_param_val[0]
+        dict_from_fds_one_line["_GROUP"] = group_param_val[0]
 
         for j in list(range(len(group_param_val)))[1::2]:
-            dict_from_fds_one_line[group_param_val[j]] = group_param_val[j+1]
+            dict_from_fds_one_line[group_param_val[j]] = group_param_val[j + 1]
 
         list_from_fds.append(dict_from_fds_one_line)
 
@@ -121,7 +129,7 @@ def fds2list(fds_script: str, default_param_dict: dict = None):
 
 def fds2list2(fds_script: str, default_param_list: list):
 
-    res = re.findall(r'&[\s\S]*?/', fds_script)
+    res = re.findall(r"&[\s\S]*?/", fds_script)
 
     list_from_fds = list()
     for i, v in enumerate(res):
@@ -131,12 +139,14 @@ def fds2list2(fds_script: str, default_param_list: list):
 
         group_param_val = fds2dict_parameterise_single_fds_command(v)
 
-        list_from_fds_one_line[default_param_list.index('_GROUP')] = group_param_val[0]
+        list_from_fds_one_line[default_param_list.index("_GROUP")] = group_param_val[0]
 
         for j in list(range(len(group_param_val)))[1::2]:
-            if '(' in group_param_val[j]:
+            if "(" in group_param_val[j]:
                 continue
-            list_from_fds_one_line[default_param_list.index(group_param_val[j])] = group_param_val[j+1]
+            list_from_fds_one_line[
+                default_param_list.index(group_param_val[j])
+            ] = group_param_val[j + 1]
 
         list_from_fds.append(list_from_fds_one_line)
 
@@ -145,7 +155,7 @@ def fds2list2(fds_script: str, default_param_list: list):
 
 def fds2list3(fds_script: str, default_fds_param_list: list = None):
 
-    fds_command_list = re.findall(r'&[\s\S]*?/', fds_script)
+    fds_command_list = re.findall(r"&[\s\S]*?/", fds_script)
 
     # MAKE A LIST OF PARAMETER NAMES (i.e. ALL POSSIBLE FDS PARAMETERS)
     # =================================================================
@@ -157,14 +167,16 @@ def fds2list3(fds_script: str, default_fds_param_list: list = None):
             fds_group_param_val = fds2dict_parameterise_single_fds_command(i)
             fds_command_parameterised_list.append(fds_group_param_val)
             for j in list(range(len(fds_group_param_val)))[1::2]:
-                if '(' in fds_group_param_val[j]:
+                if "(" in fds_group_param_val[j]:
                     continue
                 fds_param_list_all.extend([fds_group_param_val[j]])
-        fds_param_list_all += ['_GROUP']
+        fds_param_list_all += ["_GROUP"]
         fds_param_list_all = sorted(list(set(fds_param_list_all)))
     else:
         fds_param_list_all = copy.copy(default_fds_param_list)
-        fds_command_parameterised_list = [fds2dict_parameterise_single_fds_command(i) for i in fds_command_list]
+        fds_command_parameterised_list = [
+            fds2dict_parameterise_single_fds_command(i) for i in fds_command_list
+        ]
 
     #
 
@@ -172,7 +184,9 @@ def fds2list3(fds_script: str, default_fds_param_list: list = None):
 
     # to check length
     if len(fds_command_list) != len(fds_command_parameterised_list):
-        raise ValueError("Length of `fds_command_list` and `fds_command_parameterised_list` not equal.")
+        raise ValueError(
+            "Length of `fds_command_list` and `fds_command_parameterised_list` not equal."
+        )
 
     for i, v in enumerate(fds_command_list):
 
@@ -180,11 +194,17 @@ def fds2list3(fds_script: str, default_fds_param_list: list = None):
 
         # to work out parameterised fds command (single line) in one-hot format.
         fds_parameterised_liner = [None] * len(fds_param_list_all)
-        fds_parameterised_liner[fds_param_list_all.index('_GROUP')] = fds_group_param_val[0]
+        fds_parameterised_liner[
+            fds_param_list_all.index("_GROUP")
+        ] = fds_group_param_val[0]
         for j in list(range(len(fds_group_param_val)))[1::2]:
-            if '(' in fds_group_param_val[j]:  # ignore array format FDS parameters, i.e. MALT(1,1)
+            if (
+                "(" in fds_group_param_val[j]
+            ):  # ignore array format FDS parameters, i.e. MALT(1,1)
                 continue
-            fds_parameterised_liner[fds_param_list_all.index(fds_group_param_val[j])] = fds_group_param_val[j+1]
+            fds_parameterised_liner[
+                fds_param_list_all.index(fds_group_param_val[j])
+            ] = fds_group_param_val[j + 1]
 
         fds_param_list_out.append(fds_parameterised_liner)
 
@@ -214,9 +234,9 @@ def fds2dict_parameterise_single_fds_command(line: str):
 
     group_name = re.findall(r"^(\w+) ", line)
     if len(group_name) > 1:
-        raise ValueError('Multiple group names found, only 1 expected: ', group_name)
+        raise ValueError("Multiple group names found, only 1 expected: ", group_name)
     elif len(group_name) == 0:
-        raise ValueError('No group name found.')
+        raise ValueError("No group name found.")
     else:
         group_name = group_name[0]
     # remove group_name from the line
@@ -245,8 +265,8 @@ def test_fds2list3():
 
     l0, l1 = fds2list3(EXAMPLE_FDS_SCRIPT_RIU_MOE1)
     d = {i: v for i, v in enumerate(l0)}
-    df = pd.DataFrame.from_dict(d, orient='index', columns=l1)
-    pprint.pprint(df[df['_GROUP'] == 'RAMP'].dropna(axis=1))
+    df = pd.DataFrame.from_dict(d, orient="index", columns=l1)
+    pprint.pprint(df[df["_GROUP"] == "RAMP"].dropna(axis=1))
 
 
 def test_fds2list2():
@@ -255,24 +275,26 @@ def test_fds2list2():
     import pandas as pd
     from fdspy.lib.fds2dict_data import EXAMPLE_FDS_SCRIPT_RIU_MOE1
 
-    out = fds2list2(EXAMPLE_FDS_SCRIPT_RIU_MOE1, ['_GROUP']+all_fds_input_parameters_in_a_list())
+    out = fds2list2(
+        EXAMPLE_FDS_SCRIPT_RIU_MOE1, ["_GROUP"] + all_fds_input_parameters_in_a_list()
+    )
     out = {i: v for i, v in enumerate(out)}
-    out2 = pd.DataFrame.from_dict(out, orient='index', columns=['_GROUP']+all_fds_input_parameters_in_a_list())
-    pprint.pprint(out2[out2['_GROUP'] == 'RAMP'].dropna(axis=1))
+    out2 = pd.DataFrame.from_dict(
+        out, orient="index", columns=["_GROUP"] + all_fds_input_parameters_in_a_list()
+    )
+    pprint.pprint(out2[out2["_GROUP"] == "RAMP"].dropna(axis=1))
 
 
-def fds_analyser(df: pd.DataFrame = None):
+def fds_analyser(df: pd.DataFrame):
 
-    import pprint
-    import pandas as pd
-    from fdspy.lib.fds2dict_data import EXAMPLE_FDS_SCRIPT_RIU_MOE1
-    from fdspy.lib.fds2dict_data import EXAMPLE_FDS_SCRIPT_ARUP_TUNNEL_FIRE
-
-    l0, l1 = fds2list3(EXAMPLE_FDS_SCRIPT_ARUP_TUNNEL_FIRE)
-    d = {i: v for i, v in enumerate(l0)}
-    df = pd.DataFrame.from_dict(d, orient='index', columns=l1)
+    # General Info
+    # ============
 
     print(fds_analyser_general(df))
+
+    # HRR curve
+    # =========
+
     fds_analyser_hrr(df).show()
 
 
@@ -288,8 +310,8 @@ def fds_analyser_hrr(df: pd.DataFrame) -> pex:
     # Filter items with `_GROUP` == `SURF` and has `HRRPUA` value
 
     df2 = copy.copy(df)
-    df2 = df2[df2['_GROUP'] == 'SURF']
-    df2 = df2[df2['HRRPUA'].notnull()]
+    df2 = df2[df2["_GROUP"] == "SURF"]
+    df2 = df2[df2["HRRPUA"].notnull()]
     df2.dropna(axis=1, inplace=True)
 
     # Make the above a list
@@ -300,76 +322,81 @@ def fds_analyser_hrr(df: pd.DataFrame) -> pex:
 
     for dict_surf_hrrpua in list_dict_surf_hrrpua:
 
-        id = dict_surf_hrrpua['ID'].replace('"', '').replace("'", '')
+        id = dict_surf_hrrpua["ID"].replace('"', "").replace("'", "")
         list_dict_obst = list()
 
         df3 = copy.copy(df)  # used to filter obst linked to the surf_hrrpua
-        df3 = df3[df3['SURF_IDS'].notnull()]
-        df3 = df3[df3['SURF_IDS'].str.contains(id)]
+        df3 = df3[df3["SURF_IDS"].notnull()]
+        df3 = df3[df3["SURF_IDS"].str.contains(id)]
         df3.dropna(axis=1, inplace=True)
         for i, v in df3.iterrows():
             dict_obst = v.to_dict()
 
-            if dict_obst['_GROUP'] != 'OBST':
-                raise ValueError('Only `SURF` with `HRRPUA` assigned to `OBST` with `SURF_IDS` is supported.')
+            if dict_obst["_GROUP"] != "OBST":
+                raise ValueError(
+                    "Only `SURF` with `HRRPUA` assigned to `OBST` with `SURF_IDS` is supported."
+                )
 
             # Calculate fire area
             # -------------------
             # identify which index the surf is assigned to
-            obst_surf_ids = dict_obst['SURF_IDS']
+            obst_surf_ids = dict_obst["SURF_IDS"]
             i_assigned = -1
-            for i_assigned, v_ in enumerate(obst_surf_ids.split(',')):
+            for i_assigned, v_ in enumerate(obst_surf_ids.split(",")):
                 if id in v_:
                     break
-            if i_assigned == 1 or i_assigned < 0:  # only supports surf assigned to top or bottom
-                raise ValueError('`SURF` with `HRRPUA` can not assigned to sides in `SURF_IDS`.')
+            if (
+                i_assigned == 1 or i_assigned < 0
+            ):  # only supports surf assigned to top or bottom
+                raise ValueError(
+                    "`SURF` with `HRRPUA` can not assigned to sides in `SURF_IDS`."
+                )
 
             # work out area
-            x1, x2, y1, y2, z1, z2 = [float(_) for _ in dict_obst['XB'].split(',')]
-            dx, dy, dz = abs(x2-x1), abs(y2-y1), abs(z2-z1)
+            x1, x2, y1, y2, z1, z2 = [float(_) for _ in dict_obst["XB"].split(",")]
+            dx, dy, dz = abs(x2 - x1), abs(y2 - y1), abs(z2 - z1)
             area = dx * dy
 
             # Calculate HRRPUA
             # ----------------
-            hrrpua = float(dict_surf_hrrpua['HRRPUA'])
+            hrrpua = float(dict_surf_hrrpua["HRRPUA"])
 
             # Calculate hrr against time curve
             # --------------------------------
             df4 = copy.copy(df)
-            df4 = df4[df4['T_END'].notna()]
+            df4 = df4[df4["T_END"].notna()]
             df4.dropna(axis=1, inplace=True)
-            time_array = np.arange(0, float(list(df4['T_END'])[0])+1, 1)
+            time_array = np.arange(0, float(list(df4["T_END"])[0]) + 1, 1)
             hrr_frac_array = None
             hrr_array = None
-            print(dict_surf_hrrpua)
-            if 'TAU_Q' in dict_surf_hrrpua.keys():
-                tau_q = float(dict_surf_hrrpua['TAU_Q'])
+            if "TAU_Q" in dict_surf_hrrpua.keys():
+                tau_q = float(dict_surf_hrrpua["TAU_Q"])
                 if tau_q > 0:
                     hrr_frac_array = np.tanh(time_array / tau_q)
                 elif tau_q < 0:
                     hrr_frac_array = (time_array / tau_q) ** 2
                 else:
-                    raise ValueError('TAU_Q is zero, not good.')
+                    raise ValueError("TAU_Q is zero, not good.")
                 hrr_frac_array[hrr_frac_array > 1] = 1
                 hrr_array = hrr_frac_array * area * hrrpua
-            elif 'RAMP_Q' in dict_surf_hrrpua.keys():
-                ramp_q = dict_surf_hrrpua['RAMP_Q']
+            elif "RAMP_Q" in dict_surf_hrrpua.keys():
+                ramp_q = dict_surf_hrrpua["RAMP_Q"]
 
-                df5 = df[df['_GROUP'] == 'RAMP']
-                df5 = df5[df5['ID'] == ramp_q]
+                df5 = df[df["_GROUP"] == "RAMP"]
+                df5 = df5[df5["ID"] == ramp_q]
                 df5 = df5.dropna(axis=1)
 
-                time_raw = df5['T'].astype(float).values
-                frac_raw = df5['F'].astype(float).values
+                time_raw = df5["T"].astype(float).values
+                frac_raw = df5["F"].astype(float).values
                 frac_raw = frac_raw[np.argsort(time_raw)]
                 time_raw = np.sort(time_raw)
 
                 hrr_frac_array = np.interp(time_array, time_raw, frac_raw)
                 hrr_array = hrr_frac_array * area * hrrpua
             else:
-                raise NotImplemented('Only TAU_Q and RAMP_Q are currently supported.')
+                raise NotImplemented("Only TAU_Q and RAMP_Q are currently supported.")
 
-    fig = pex.line(x=time_array, y=hrr_array)
+    fig = pex.line(x=time_array, y=hrr_array, labels=dict(x="Time [s]", y="HRR [kW]"))
 
     return fig
 
@@ -377,21 +404,38 @@ def fds_analyser_hrr(df: pd.DataFrame) -> pex:
 def fds_analyser_general(df: pd.DataFrame):
     import collections
 
-    sf = '{:<40.40} {}'  # format
+    sf = "{:<40.40} {}"  # format
     d = collections.OrderedDict()  # to collect results statistics
 
-    d['total number of commands'] = len(df)
-    d['total number of unique groups'] = len(list(set(list(df['_GROUP']))))
-    d['total number of unique parameters'] = len(df.columns) - 1
-    d['total number of slices'] = len(df[df['_GROUP'] == 'SLCF'])
+    d["total number of commands"] = len(df)
+    d["total number of unique groups"] = len(list(set(list(df["_GROUP"]))))
+    d["total number of unique parameters"] = len(df.columns) - 1
+    d["total number of slices"] = len(df[df["_GROUP"] == "SLCF"])
 
-    return '\n'.join([sf.format(i, v) for i, v in d.items()])
-
-
-def fds_analyser_fire():
-    pass
+    return "\n".join([sf.format(i, v) for i, v in d.items()])
 
 
-if __name__ == '__main__':
+def main_cli(filepath_fds: str):
 
-    fds_analyser()
+    with open(filepath_fds, "r") as f:
+        fds_script = f.read()
+
+    main(fds_script)
+
+
+def main(fds_script: str):
+
+    import pandas as pd
+
+    l0, l1 = fds2list3(fds_script)
+    d = {i: v for i, v in enumerate(l0)}
+    df = pd.DataFrame.from_dict(d, orient="index", columns=l1)
+
+    fds_analyser(df)
+
+
+if __name__ == "__main__":
+
+    from fdspy.lib.fds2dict_data import EXAMPLE_FDS_SCRIPT_MALTHOUSE_FF1
+
+    main(EXAMPLE_FDS_SCRIPT_MALTHOUSE_FF1)

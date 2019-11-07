@@ -3,6 +3,7 @@
 
 def test_all_fds_input_parameters_in_a_list():
     from fdspy.lib.fds2dict import all_fds_input_parameters_in_a_list
+
     assert len(all_fds_input_parameters_in_a_list()) == 652
 
 
@@ -62,4 +63,4 @@ def test_fds2dict_parameterise_single_fds_command():
     assert fff(line) == 13
 
     line = r"""&TIME T_END=400.0, RESTRICT_TIME_STEP=.FALSE./"""
-    assert ff(line)[3] == 'RESTRICT_TIME_STEP'
+    assert ff(line)[3] == "RESTRICT_TIME_STEP"
