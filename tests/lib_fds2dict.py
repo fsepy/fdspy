@@ -2,19 +2,21 @@
 
 
 def test_all_fds_input_parameters_in_a_list():
-    from fdspy.lib.fds2dict import all_fds_input_parameters_in_a_list
+    from fdspy.lib.fds_script_proc_analyser import all_fds_input_parameters_in_a_list
 
     assert len(all_fds_input_parameters_in_a_list()) == 652
 
 
 def test_fds_groups_in_a_list():
-    from fdspy.lib.fds2dict import all_fds_groups_in_a_list
+    from fdspy.lib.fds_script_proc_analyser import all_fds_groups_in_a_list
 
     assert len(all_fds_groups_in_a_list()) == 36
 
 
 def test_fds2dict_parameterise_single_fds_command():
-    from fdspy.lib.fds2dict import fds2dict_parameterise_single_fds_command as ff
+    from fdspy.lib.fds_script_proc_analyser import (
+        fds2dict_parameterise_single_fds_command as ff,
+    )
 
     def fff(line_):
         line_ = ff(line_)

@@ -25,8 +25,7 @@ setuptools.setup(
     download_url="https://github.com/fsepy/fdspy/archive/master.zip",
     keywords=[
         "fire",
-        "engineering"
-        "fire dynamics simulator",
+        "engineering" "fire dynamics simulator",
         "computational fluid dynamics",
         "fds",
         "cfd",
@@ -49,6 +48,7 @@ setuptools.setup(
         "fdspy.fdsfront",
         "fdspy.gen_devc",
         "fdspy.fdsbginfo",
+        "fdspy.lib",
     ],
     install_requires=requirements,
     include_package_data=True,

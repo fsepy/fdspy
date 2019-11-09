@@ -1,7 +1,7 @@
 from fdspy.lib.cibse_guide_e import _dT_d_dt, _Q, _theta_c, _U
 import seaborn as sns
 
-sns.set_style("ticks", {"axes.grid": True,})
+sns.set_style("ticks", {"axes.grid": True})
 
 
 if __name__ == "__main__":
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     import seaborn as sns
 
     sns.set_style(
-        "white", {"axes.grid": True, "grid.linestyle": ":", "grid.color": "0.5",}
+        "white", {"axes.grid": True, "grid.linestyle": ":", "grid.color": "0.5"}
     )
     sns.set_context("paper")
     fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(3.5, 3.5), sharex="all")
