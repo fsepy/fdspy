@@ -125,110 +125,94 @@ def fds_analyser_slcf(df: pd.DataFrame) -> str:
 
 
 def fds_analyser_hrr(df: pd.DataFrame) -> pex:
+    # GET A LIST OF SURF WITH HRRPUA COMPONENT
+    # ========================================
+    df1 = copy.copy(df)
+    df1 = df1[df1["_GROUP"] == "SURF"]
+    df1 = df1[df1["HRRPUA"].notnull()]
+    df1.dropna(axis=1, inplace=True)
 
-    # Filter items with `_GROUP` == `SURF` and has `HRRPUA` value
+    list_surfs = list()
+    for i, v in df1.iterrows():
+        list_surfs.append(v.to_dict())
 
-    df2 = copy.copy(df)
-    df2 = df2[df2["_GROUP"] == "SURF"]
-    df2 = df2[df2["HRRPUA"].notnull()]
-    df2.dropna(axis=1, inplace=True)
+    # GET A LIST OF OBST/VENT WHOS SURF_ID/SURF_IDS/SURF_ID6 IS ASSOCIATED WITH THE `list_surfs`
+    # ==========================================================================================
+    list_obst_with_surf_details = list()
 
-    # Make the above a list
-
-    list_dict_surf_hrrpua = list()
-    for i, v in df2.iterrows():
-        list_dict_surf_hrrpua.append(v.to_dict())
-
-    for dict_surf_hrrpua in list_dict_surf_hrrpua:
-
-        id = dict_surf_hrrpua["ID"].replace('"', "").replace("'", "")
-        list_dict_obst = list()
-
-        df3 = copy.copy(df)  # used to filter obst linked to the surf_hrrpua
-        try:
-            df3 = df3[df3["SURF_IDS"].notnull()]
-            df3 = df3[df3["SURF_IDS"].str.contains(id)]
-        except KeyError:
+    for dict_surf in list_surfs:
+        dict_surf_ = copy.copy(dict_surf)  # for inject into OBST/VENT dict
+        dict_surf_.pop('_GROUP', None)
+        dict_surf_.pop('ID', None)
+        id = dict_surf["ID"].replace('"', "").replace("'", "")
+        df1 = copy.copy(df)  # used to filter obst linked to the surf_hrrpua
+        for k in ['SURF_IDS', 'SURF_ID', 'SURF_ID6']:
             try:
-                df3 = df3[df3["SURF_ID"].notnull()]
-                df3 = df3[df3["SURF_ID"].str.contains(id)]
+                df2 = df1[df1[k].notna()]
+                df2 = df2[df2[k].str.contains(id)]
+                df2.dropna(axis=1, how='all', inplace=True)
+                for i, v in df2.iterrows():
+                    v = v.to_dict()
+                    v.pop('ID', None)
+                    v.update(dict_surf_)
+                    list_obst_with_surf_details.append(v)
             except KeyError:
                 pass
-        df3.dropna(axis=1, inplace=True)
-        for i, v in df3.iterrows():
-            dict_obst = v.to_dict()
 
-            # Calculate fire area
-            # -------------------
-            # identify which index the surf is assigned to
-            try:
-                obst_surf_ids = dict_obst["SURF_IDS"]
-            except KeyError:
-                obst_surf_ids = dict_obst["SURF_ID"]
+    for dict_obst_with_surf_details in list_obst_with_surf_details:
+        dict_obst = dict_obst_with_surf_details
 
-            i_assigned = -1
-            for i_assigned, v_ in enumerate(obst_surf_ids.split(",")):
-                if id in v_:
-                    break
-            if (
-                i_assigned == 1 or i_assigned < 0
-            ):  # only supports surf assigned to top or bottom
-                raise ValueError(
-                    "`SURF` with `HRRPUA` can not assigned to sides in `SURF_IDS`."
-                )
+        # Calculate fire area
+        # -------------------
+        x1, x2, y1, y2, z1, z2 = [float(_) for _ in dict_obst["XB"].split(",")]
+        dx, dy, dz = abs(x2 - x1), abs(y2 - y1), abs(z2 - z1)
+        if dict_obst["_GROUP"] != "OBST":
+            area = dx * dy
+        elif dict_obst["_GROUP"] != "VENT":
+            area = max([dx * dy, dy * dz, dz * dx])
+        else:
+            raise ValueError('Fire should be assigned to OBST or VENT.')
 
-            # work out area
-            x1, x2, y1, y2, z1, z2 = [float(_) for _ in dict_obst["XB"].split(",")]
-            dx, dy, dz = abs(x2 - x1), abs(y2 - y1), abs(z2 - z1)
-            if dict_obst["_GROUP"] != "OBST":
-                area = dx * dy
-            elif dict_obst["_GROUP"] != "VENT":
-                area = max([dx * dy, dy * dz, dz * dx])
+        # Calculate HRRPUA
+        # ----------------
+        hrrpua = float(dict_obst["HRRPUA"])
 
-            # Calculate HRRPUA
-            # ----------------
-            hrrpua = float(dict_surf_hrrpua["HRRPUA"])
-
-            # Calculate hrr against time curve
-            # --------------------------------
-            df4 = copy.copy(df)
-            df4 = df4[df4["T_END"].notna()]
-            df4.dropna(axis=1, inplace=True)
-            time_array = np.arange(0, float(list(df4["T_END"])[0]) + 1, 1)
-            hrr_frac_array = None
-            hrr_array = None
-            if "TAU_Q" in dict_surf_hrrpua.keys():
-                tau_q = float(dict_surf_hrrpua["TAU_Q"])
-                if tau_q > 0:
-                    hrr_frac_array = np.tanh(time_array / tau_q)
-                elif tau_q < 0:
-                    hrr_frac_array = (time_array / tau_q) ** 2
-                else:
-                    raise ValueError("TAU_Q is zero, not good.")
-                hrr_frac_array[hrr_frac_array > 1] = 1
-                hrr_array = hrr_frac_array * area * hrrpua
-            elif "RAMP_Q" in dict_surf_hrrpua.keys():
-                ramp_q = dict_surf_hrrpua["RAMP_Q"]
-
-                df5 = df[df["_GROUP"] == "RAMP"]
-                df5 = df5[df5["ID"] == ramp_q]
-                df5 = df5.dropna(axis=1)
-
-                time_raw = df5["T"].astype(float).values
-                frac_raw = df5["F"].astype(float).values
-                frac_raw = frac_raw[np.argsort(time_raw)]
-                time_raw = np.sort(time_raw)
-
-                hrr_frac_array = np.interp(time_array, time_raw, frac_raw)
-                hrr_array = hrr_frac_array * area * hrrpua
-            elif (
-                "RAMP_T" in dict_surf_hrrpua.keys()
-                or "RAMP_V" in dict_surf_hrrpua.keys()
-            ):
-                raise NotImplemented("Only TAU_Q and RAMP_Q are currently supported.")
+        # Calculate hrr against time curve
+        # --------------------------------
+        # yields `time_array`, `hrr_frac_array` and `hrr_array`
+        time_array = np.arange(0, float(df["T_END"].dropna().values[0]) + 1, 1)
+        if "TAU_Q" in dict_obst.keys():
+            tau_q = float(dict_obst["TAU_Q"])
+            if tau_q > 0:
+                hrr_frac_array = np.tanh(time_array / tau_q)
+            elif tau_q < 0:
+                hrr_frac_array = (time_array / tau_q) ** 2
             else:
-                hrr_frac_array = np.full_like(time_array, fill_value=1.0, dtype=float)
-                hrr_array = hrr_frac_array * area * hrrpua
+                raise ValueError("TAU_Q is zero, not good.")
+            hrr_frac_array[hrr_frac_array > 1] = 1
+            hrr_array = hrr_frac_array * area * hrrpua
+        elif "RAMP_Q" in dict_obst.keys():
+            ramp_q = dict_obst["RAMP_Q"]
+
+            df5 = df[df["_GROUP"] == "RAMP"]
+            df5 = df5[df5["ID"] == ramp_q]
+            df5 = df5.dropna(axis=1)
+
+            time_raw = df5["T"].astype(float).values
+            frac_raw = df5["F"].astype(float).values
+            frac_raw = frac_raw[np.argsort(time_raw)]
+            time_raw = np.sort(time_raw)
+
+            hrr_frac_array = np.interp(time_array, time_raw, frac_raw)
+            hrr_array = hrr_frac_array * area * hrrpua
+        elif (
+            "RAMP_T" in dict_obst.keys()
+            or "RAMP_V" in dict_obst.keys()
+        ):
+            raise NotImplemented("Only TAU_Q and RAMP_Q are currently supported.")
+        else:
+            hrr_frac_array = np.full_like(time_array, fill_value=1.0, dtype=float)
+            hrr_array = hrr_frac_array * area * hrrpua
 
     fig = pex.line(
         x=time_array,
