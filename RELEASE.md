@@ -4,7 +4,7 @@
 
 - Nothing yet.
 - MESH statistics to show mesh cell size for each mesh.
-- Q* calculation.
+- d* calculation.
 
 ### VERSIONS
 
