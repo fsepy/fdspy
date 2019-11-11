@@ -24,7 +24,27 @@ Does not support multiple fires.
 def fds_analyser(df: pd.DataFrame):
 
     std_out_str = list()
-    sf = "{:<40.40} {}"  # format
+
+    def sf_1_1(s1, s2):
+        sf = "{:<40.40} {}"  # format
+        if isinstance(s2, int):
+            return "{:<40.40} {:d}".format(s1, s2)
+        elif isinstance(s2, float):
+            return "{:<40.40} {:.2f}".format(s1, s2)
+        elif isinstance(s2, list) or isinstance(s2, tuple):
+            if isinstance(s2[0], int):
+                s2 = ["{:d}".format(i) for i in s2]
+                s2 = ', '.join(s2)
+                return "{:<40.40} {}".format(s1, s2)
+            elif isinstance(s2[0], float):
+                s2 = ["{:.2f}".format(i) for i in s2]
+                s2 = ', '.join(s2)
+                return "{:<40.40} {}".format(s1, s2)
+            else:
+                s2 = ', '.join(s2)
+                return "{:<40.40} {}".format(s1, s2)
+        else:
+            return "{:<40.40} {}".format(s1, s2)
 
     # General Info
     # ============
@@ -32,7 +52,7 @@ def fds_analyser(df: pd.DataFrame):
     std_out_str.append("GENERAL STATISTICS\n")
     std_out_str.append("-" * 40 + "\n")
     _ = fds_analyser_general(df)
-    _ = "\n".join([sf.format(i, v) for i, v in _.items()]) + "\n"
+    _ = "\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n"
     std_out_str.append(_)
 
     # Mesh statistics
@@ -41,7 +61,7 @@ def fds_analyser(df: pd.DataFrame):
     std_out_str.append("MESH STATISTICS\n")
     std_out_str.append("-" * 40 + "\n")
     _ = fds_analyser_mesh(df)
-    _ = "\n".join([sf.format(i, v) for i, v in _.items()]) + "\n"
+    _ = "\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n"
     std_out_str.append(_)
 
     # SLCF statistics
@@ -51,7 +71,7 @@ def fds_analyser(df: pd.DataFrame):
     std_out_str.append("SLCF STATISTICS\n")
     std_out_str.append("-" * 40 + "\n")
     _ = fds_analyser_slcf(df)
-    _ = "\n".join([sf.format(i, v) for i, v in _.items()]) + "\n"
+    _ = "\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n"
     std_out_str.append(_)
 
     # HRR statistics
@@ -64,7 +84,7 @@ def fds_analyser(df: pd.DataFrame):
     fig_hrr = fds_analyser_hrr_fig(_)
     _.pop('time_array')
     _.pop('hrr_array')
-    std_out_str.append("\n".join([sf.format(i, v) for i, v in _.items()]) + "\n")
+    std_out_str.append("\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n")
 
     # Packing up results and return
     # =============================
@@ -137,7 +157,8 @@ def fds_analyser_slcf(df: pd.DataFrame) -> dict:
             df2 = df1[i].dropna()
             d[f"{i} locations"] = ", ".join(sorted(list(set(df2.values))))
         else:
-            d[f"{i} locations"] = "None"
+            # d[f"{i} locations"] = "None"
+            pass
 
     return d
 
