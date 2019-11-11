@@ -16,9 +16,7 @@ LIMITATIONS
 FDS parameters with array feature are ignored.
 i.e. MALT(1,1), anything parameter followed with (#).
 
-Does not support multiple fires, only supports multiple (redundant) SURF group.
-&SURF ID='Burner', COLOR='RED', TMP_FRONT=500. HRRPUA=2672., RAMP_Q='Burner_RAMP_Q'/
-&OBST XB=49.00,51.00,3.80,4.80,0.00,0.40, SURF_IDS='Burner','Steel pool','Steel pool'/
+Does not support multiple fires.
 """
 
 
