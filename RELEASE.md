@@ -2,8 +2,8 @@
 
 ### KNOWN ISSUES AND TASKS LIST
 
-- [ ] Nothing yet.
-
+- Nothing yet.
+- MESH statistics to show mesh cell size for each mesh.
 
 ### VERSIONS
 
