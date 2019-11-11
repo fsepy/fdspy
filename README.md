@@ -27,17 +27,8 @@ Chose one of the following installation path.
     *Note installing `fdspy` via this route will include the latest commits/changes to the library.*  
 
     ```sh
-    pip install --upgrade "git+https://github.com/fsepy/SfePrapy.git@master"
+    pip install --upgrade "git+https://github.com/fsepy/fdspy.git@master"
     ```
-
-#### Local
-For any reasons you do not want to install `fdspy` as a Python library, download the entire project folder to your computer (e.g. Desktop), change current working directory to the project folder then install `fdspy` by using pip:
-
-```bash
-pip install .
-```
-
-The installation process should be able to install all required libraries listed in Prerequisites.
 
 ### Usage
 
