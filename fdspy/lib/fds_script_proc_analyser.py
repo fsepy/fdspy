@@ -3,6 +3,7 @@
 import copy
 
 import os
+from typing import Union
 import collections
 import numpy as np
 import pandas as pd
@@ -20,23 +21,28 @@ Does not support multiple fires.
 """
 
 
-def fds_analyser(df: pd.DataFrame) -> dict:
+def fds_analyser(df: pd.DataFrame):
 
     std_out_str = list()
+    sf = "{:<40.40} {}"  # format
 
     # General Info
     # ============
     std_out_str.append("-" * 40 + "\n")
     std_out_str.append("GENERAL STATISTICS\n")
     std_out_str.append("-" * 40 + "\n")
-    std_out_str.append(fds_analyser_general(df))
+    _ = fds_analyser_general(df)
+    _ = "\n".join([sf.format(i, v) for i, v in _.items()]) + "\n"
+    std_out_str.append(_)
 
     # Mesh statistics
     # ===============
     std_out_str.append("-" * 40 + "\n")
     std_out_str.append("MESH STATISTICS\n")
     std_out_str.append("-" * 40 + "\n")
-    std_out_str.append(fds_analyser_mesh(df))
+    _ = fds_analyser_mesh(df)
+    _ = "\n".join([sf.format(i, v) for i, v in _.items()]) + "\n"
+    std_out_str.append(_)
 
     # SLCF statistics
     # ===============
@@ -44,59 +50,73 @@ def fds_analyser(df: pd.DataFrame) -> dict:
     std_out_str.append("-" * 40 + "\n")
     std_out_str.append("SLCF STATISTICS\n")
     std_out_str.append("-" * 40 + "\n")
-    std_out_str.append(fds_analyser_slcf(df))
+    _ = fds_analyser_slcf(df)
+    _ = "\n".join([sf.format(i, v) for i, v in _.items()]) + "\n"
+    std_out_str.append(_)
 
-    # HRR curve
-    # =========
+    # HRR statistics
+    # ==============
 
-    fig_hrr = fds_analyser_hrr(df)
+    std_out_str.append("-" * 40 + "\n")
+    std_out_str.append("HRR STATISTICS\n")
+    std_out_str.append("-" * 40 + "\n")
+    _ = fds_analyser_hrr(df)
+    fig_hrr = fds_analyser_hrr_fig(_)
+    _.pop('time_array')
+    _.pop('hrr_array')
+    std_out_str.append("\n".join([sf.format(i, v) for i, v in _.items()]) + "\n")
 
+    # Packing up results and return
+    # =============================
     dict_out = {"str": "".join(std_out_str), "fig_hrr": fig_hrr}
 
     return dict_out
 
 
-def fds_analyser_general(df: pd.DataFrame):
-    sf = "{:<40.40} {}"  # format
+def fds_analyser_general(df: pd.DataFrame) -> dict:
     d = collections.OrderedDict()  # to collect results statistics
 
     d["command count"] = len(df)
-    d["unique group count"] = len(list(set(list(df["_GROUP"]))))
-    d["unique parameter count"] = len(df.columns) - 1
-    d["simulation duration"] = df["T_END"].dropna().values[0]
+    # d["unique group count"] = len(list(set(list(df["_GROUP"]))))
+    # d["unique parameter count"] = len(df.columns) - 1
+    d["sim. duration"] = df["T_END"].dropna().values[0]
 
-    return "\n".join([sf.format(i, v) for i, v in d.items()]) + "\n"
+    return d
 
 
-def fds_analyser_mesh(df: pd.DataFrame):
-    sf = "{:<40.40} {}"  # format
+def fds_analyser_mesh(df: pd.DataFrame) -> dict:
     d = collections.OrderedDict()  # to collect results statistics
+
+    d_star = fds_analyser_hrr(df)['D*']
 
     df1 = df[df["_GROUP"] == "MESH"]
     df1 = df1.dropna(axis=1, inplace=False)
 
-    count_cell = 0
-    count_mesh = 0
-    length_mesh = 0
+    cell_count_i = list()
+    cell_size_i = list()
+    volume_i = list()
     for i, v in df1.iterrows():
         v = v.to_dict()
-        ijk = [float(j) for j in v["IJK"].split(",")]
+        ii, jj, kk = [float(j) for j in v["IJK"].split(",")]
         x1, x2, y1, y2, z1, z2 = [float(j) for j in v["XB"].split(",")]
 
-        count_mesh += 1
-        count_cell += np.product(ijk)
-        length_mesh += abs(x1 - x2) + abs(y1 - y2) + abs(z1 - z2)
+        cell_count_i.append(ii*jj*kk)
+        cell_size_i.append([abs(x2-x1)/ii, abs(y2-y1)/jj, abs(z2-z1)/kk])
+        volume_i.append(abs(x1 - x2) * abs(y1 - y2) * abs(z1 - z2))
 
-    count_cell = int(count_cell / 1000)
-    d["mesh count"] = f"{count_mesh:d}"
-    d["cell count"] = f"{count_cell:,} k"
-    d["average cell size"] = str(int(length_mesh / count_cell * 1000)) + " mm"
+    d["mesh count"] = "{:d}".format(len(cell_count_i))
+    d["cell count"] = "{:,d} k".format(int(np.sum(cell_count_i)/1000))
+    d["ave. cell size"] = '{:.0f} mm'.format(((np.sum(volume_i) / np.sum(cell_count_i)) ** (1/3)) * 1000)
 
-    return "\n".join([sf.format(i, v) for i, v in d.items()]) + "\n"
+    for i, cell_count in enumerate(cell_count_i):
+        cell_size = cell_size_i[i]
+        d[f"mesh {i:d} cell size"] = cell_size
+        d[f"mesh {i:d} D*/dx (max., min.)"] = [d_star/np.max(cell_size), d_star/np.min(cell_size)]
+
+    return d
 
 
-def fds_analyser_slcf(df: pd.DataFrame) -> str:
-    sf = "{:<40.40} {}"  # format
+def fds_analyser_slcf(df: pd.DataFrame) -> dict:
     d = collections.OrderedDict()  # to collect results statistics
 
     df1 = copy.copy(df)
@@ -119,10 +139,10 @@ def fds_analyser_slcf(df: pd.DataFrame) -> str:
         else:
             d[f"{i} locations"] = "None"
 
-    return "\n".join([sf.format(i, v) for i, v in d.items()]) + "\n"
+    return d
 
 
-def fds_analyser_hrr(df: pd.DataFrame) -> pex:
+def fds_analyser_hrr(df: pd.DataFrame):
     # GET A LIST OF SURF WITH HRRPUA COMPONENT
     # ========================================
     df1 = copy.copy(df)
@@ -212,9 +232,20 @@ def fds_analyser_hrr(df: pd.DataFrame) -> pex:
             hrr_frac_array = np.full_like(time_array, fill_value=1.0, dtype=float)
             hrr_array = hrr_frac_array * area * hrrpua
 
+    return {
+        'time_array': time_array,
+        'hrr_array': hrr_array,
+        'peak HRR': np.max(hrr_array),
+        'peak HRR time': np.min(time_array[np.argmax(hrr_array)]),
+        'D*': (np.max(hrr_array)/(1.204*1.005*293*9.81)) ** (2/5)
+    }
+
+
+def fds_analyser_hrr_fig(data_dict: dict):
+
     fig = pex.line(
-        x=time_array,
-        y=hrr_array,
+        x=data_dict['time_array'],
+        y=data_dict['hrr_array'],
         labels=dict(x="Time [s]", y="HRR [kW]"),
         height=None,
         width=800,
@@ -252,5 +283,5 @@ if __name__ == "__main__":
     # main(EXAMPLE_FDS_SCRIPT_MALTHOUSE_FF1)
 
     main_cli(
-        r"C:\Users\ian\Google Drive\projects\fdspy\ofr_scripts\POST_Google_Stage_4_CFD_ScenarioD.fds"
+        r"C:\Users\ian\Desktop\fds_script\a.fds"
     )
