@@ -13,10 +13,10 @@ if __name__ == "__main__":
     time_end = 10 * 60
 
     alpha = 0.0117e3  # [W/s2]
-    r = 5.5 / 2  # Estimation
-    h = 2.8
-    RTI = 50
-    T_d_activation = 273.15 + 77  # [K]
+    r = 2.75  # Estimation
+    h = 2.4
+    RTI = 115
+    T_d_activation = 273.15 + 68  # [K]
 
     # time_end = float(input("Time end [min]: ")) * 60
     # alpha = float(input("Alpha (growth factor) [W/s2]: "))
@@ -37,7 +37,9 @@ if __name__ == "__main__":
 
     # CALCULATION
     # calculate heat release rate
-    Q = _Q(alpha, time)
+    Q = _Q(alpha, time) * 1000
+    Q = alpha * time ** 2 *1000
+
     # calculate jet speed near sprinkler
     U = _U(Q, r, h)
 
@@ -57,6 +59,8 @@ if __name__ == "__main__":
     Q[Q == -1] = np.max(Q)
     T_d[T_d == -1] = np.max(T_d)
     T_g[T_g == -1] = np.max(T_g)
+
+    Q /= 1000
 
     print(
         "{:25}: {:7.2f} [min]".format(

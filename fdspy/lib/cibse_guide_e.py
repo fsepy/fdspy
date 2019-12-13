@@ -56,9 +56,12 @@ def _Q(alpha, t):
     """[Eq. 6.1]
     :param alpha:
     :param t:
-    :return:
+    :return: [W]
     """
     Q = alpha * t ** 2
+
+    Q *= 1000
+
     return Q
 
 

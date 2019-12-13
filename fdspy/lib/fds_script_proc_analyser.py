@@ -296,6 +296,7 @@ def main(fds_script: str):
     l0, l1 = fds2list3(fds_script)
     d = {i: v for i, v in enumerate(l0)}
     df = pd.DataFrame.from_dict(d, orient="index", columns=l1)
+
     return fds_analyser(df)
 
 
@@ -304,5 +305,5 @@ if __name__ == "__main__":
     # main(EXAMPLE_FDS_SCRIPT_MALTHOUSE_FF1)
 
     main_cli(
-        r"C:\Users\ian\Desktop\fds_script\a.fds"
+        r"C:\Users\IanFu\Desktop\etst\moe1.fds"
     )

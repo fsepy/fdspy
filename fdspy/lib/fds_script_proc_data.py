@@ -1782,3 +1782,7 @@ def all_fds_input_parameters_in_a_list(fds_manual_latex: str = None):
     fds_manual_latex = sorted(list(set(fds_manual_latex)))
 
     return fds_manual_latex
+
+
+if __name__ == '__main__':
+    print(all_fds_input_parameters_in_a_list())
