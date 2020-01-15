@@ -103,7 +103,7 @@ def fds_analyser_general(df: pd.DataFrame) -> dict:
 
     # work out number of mpi processes
     try:
-        d['mpi process'] = np.asarray(df['MPI_PROCESS'].dropna().values, dtype=int).max()
+        d['mpi process'] = np.asarray(df['MPI_PROCESS'].dropna().values, dtype=int).max() + 1
     except KeyError:
         d['mpi process'] = 1
 
