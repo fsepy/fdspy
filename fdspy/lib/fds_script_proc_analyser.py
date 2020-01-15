@@ -101,6 +101,12 @@ def fds_analyser_general(df: pd.DataFrame) -> dict:
     # d["unique parameter count"] = len(df.columns) - 1
     d["sim. duration"] = df["T_END"].dropna().values[0]
 
+    # work out number of mpi processes
+    try:
+        d['mpi process'] = np.asarray(df['MPI_PROCESS'].dropna().values, dtype=int).max()
+    except KeyError:
+        d['mpi process'] = 1
+
     return d
 
 
@@ -305,5 +311,5 @@ if __name__ == "__main__":
     # main(EXAMPLE_FDS_SCRIPT_MALTHOUSE_FF1)
 
     main_cli(
-        r"C:\Users\IanFu\Desktop\etst\moe1.fds"
+        r"C:\Users\IanFu\Desktop\fdspy test\moe2.fds"
     )
