@@ -4,14 +4,21 @@ Usage:
     fdspy stats <file_name>
     fdspy sbatch [-o=<int>] [-p=<int>]
 
+Examples:
+    fdspy stats
+    fdspy stats residential_corridor.fds
+    fdspy sbatch
+    fdspy sbatch -o 2 -p 10
+
 Options:
-    -h --help       to show help.
-    -o=<int>        specify number of OMP. 1 if undefined.
-    -p=<int>        specify number of MPI. Will be work out based on `.fds` script if undefined.
+    -h --help       Help.
+    -o=<int>        Optional. To specify number of OMP. 1 if undefined.
+    -p=<int>        Optional. To specify number of MPI. This will be work out based on `.fds` script if undefined.
 
 Commands:
-    fdspy stats     to analysis all .fds files in the current working directory
-    fdspy sbatch    to perform `fdspy stats`, generate a `.sh` file and run the `.sh` file with `sbash`.
+    fdspy stats     To analysis all .fds files in the current working directory.
+    fdspy sbatch    To perform `fdspy stats`, generate a `sbatch` shell script file and run the shell script file with
+                    `sbash`.
 """
 
 import os
@@ -56,6 +63,7 @@ def sbatch_single_fds_file(filepath_fds: str, n_omp: int = 1, n_mpi: int = None)
 
     # run sh file
     subprocess.Popen(['sbatch', filename_sh], cwd=os.getcwd())
+    print('A job has been submitted: ', ' '.join(['sbatch', filename_sh]))
 
 
 def main():
