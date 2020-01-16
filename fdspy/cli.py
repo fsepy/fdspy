@@ -6,8 +6,8 @@ Usage:
 
 Options:
     -h --help       to show help.
-    -o              number of OMP, default is 1.
-    -p              number of MPI, default will be work out based on `.fds` script.
+    -o=<int>        number of OMP. 1 if undefined.
+    -p=<int>        number of MPI. Will be work out based on `.fds` script if undefined.
 
 Commands:
     fdspy stats     to analysis all .fds files in the current working directory
