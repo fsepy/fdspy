@@ -55,7 +55,8 @@ def sbatch_single_fds_file(filepath_fds: str, n_omp: int = 1, n_mpi: int = None)
         f.write(sh)
 
     # run sh file
-    subprocess.call(['sbatch', filepath_sh], shell=True)
+    subprocess.Popen(['sbatch', filepath_sh], shell=True)
+
 
 def main():
     arguments = docopt(__doc__)

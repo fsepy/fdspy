@@ -11,11 +11,11 @@ from fdspy.lib.fds_script_proc_decoder import *
 
 sh_template = r'''#!/bin/sh
 
-SBATCH -J {name}
-SBATCH -n {n_mpi}
-SBATCH -p compute
-SBATCH -e error-%j.err
-SBATCH -o output-%j.out
+#SBATCH -J {name}
+#SBATCH -n {n_mpi}
+#SBATCH -p compute
+#SBATCH -e error-%j.err
+#SBATCH -o output-%j.out
 
 source {fds_source}
 export OMP_NUM_THREADS={n_omp}
