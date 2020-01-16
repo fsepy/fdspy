@@ -11,7 +11,7 @@ Options:
 
 Commands:
     fdspy stats     to analysis all .fds files in the current working directory
-    fdspy sbatch    to perform `fds stats`, generate a `.sh` file and run the `.sh` file with `sbash`.
+    fdspy sbatch    to perform `fdspy stats`, generate a `.sh` file and run the `.sh` file with `sbash`.
 """
 
 import os
