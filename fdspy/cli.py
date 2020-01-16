@@ -6,12 +6,12 @@ Usage:
 
 Options:
     -h --help       to show help.
-    -o=<int>        number of OMP. 1 if undefined.
-    -p=<int>        number of MPI. Will be work out based on `.fds` script if undefined.
+    -o=<int>        specify number of OMP. 1 if undefined.
+    -p=<int>        specify number of MPI. Will be work out based on `.fds` script if undefined.
 
 Commands:
     fdspy stats     to analysis all .fds files in the current working directory
-    fdspy sbatch    to perform `fds stats`, generate `.sh` file and run the fds script in `cwd`.
+    fdspy sbatch    to perform `fds stats`, generate a `.sh` file and run the `.sh` file with `sbash`.
 """
 
 import os
