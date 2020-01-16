@@ -31,7 +31,7 @@ def stats_single_fds_file(filepath_fds: str):
     plotly.io.write_html(
         dict_out["fig_hrr"],
         file=filepath_fds + ".hrr.html",
-        auto_open=True,
+        auto_open=False,
         config={
             "scrollZoom": False,
             "displayModeBar": True,
@@ -47,16 +47,15 @@ def sbatch_single_fds_file(filepath_fds: str, n_omp: int = 1, n_mpi: int = None)
     # make sh file
     from fdspy.lib.sbatch import make_sh
     sh = make_sh(filepath_fds=filepath_fds, n_omp=n_omp, n_mpi=n_mpi)
-    print(sh)
 
     # write sh file
     filename_sh = 'submit.sh'
-    print(os.path.join(os.getcwd(), filename_sh))
-    with open(os.path.join(os.getcwd(), filename_sh), 'w+') as f:
+    filepath_sh = os.path.join(os.getcwd(), filename_sh)
+    with open(filepath_sh, 'w+') as f:
         f.write(sh)
 
     # run sh file
-    subprocess.call(['sbatch', filename_sh], shell=True)
+    subprocess.call(['sbatch', filepath_sh], shell=True)
 
 def main():
     arguments = docopt(__doc__)
@@ -92,6 +91,7 @@ def main():
 
         for i in fn:
             if i.endswith(".fds"):
+                stats_single_fds_file(i)
                 sbatch_single_fds_file(
                     filepath_fds=i,
                     n_omp=arguments["-o"] or 1,
