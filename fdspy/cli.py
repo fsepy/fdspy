@@ -55,7 +55,7 @@ def sbatch_single_fds_file(filepath_fds: str, n_omp: int = 1, n_mpi: int = None)
         f.write(sh)
 
     # run sh file
-    subprocess.Popen(['sbatch', filename_sh], shell=True, cwd=os.getcwd())
+    subprocess.Popen(['sbatch', filename_sh], cwd=os.getcwd())
 
 
 def main():
