@@ -113,7 +113,7 @@ def post(filepath_fds: str):
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=time_fds, y=hrr_fds, mode='lines', name='FDS input'))
     fig.add_trace(go.Scatter(x=time_csv, y=hrr_csv, mode='lines', name='FDS output'))
-    fig.update_layout(xaxis_title='Time [minute]', yaxis_title='HRR [kW]')
+    fig.update_layout(xaxis_title='Time [second]', yaxis_title='HRR [kW]', title=None)
     plotly.io.write_html(
         fig,
         file=f'{filepath_fds}.hrr.html',
