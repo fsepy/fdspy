@@ -299,7 +299,7 @@ def main_cli(filepath_fds: str):
 
 def main(fds_script: str):
     """"""
-    l0, l1 = fds2list3(fds_script)
+    l0, l1 = fds2list(fds_script)
     d = {i: v for i, v in enumerate(l0)}
     df = pd.DataFrame.from_dict(d, orient="index", columns=l1)
 

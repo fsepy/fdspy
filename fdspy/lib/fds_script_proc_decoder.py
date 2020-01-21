@@ -1,12 +1,23 @@
 import re
 import copy
-
 import pandas as pd
-import plotly
-import plotly.io
 
 
-def fds2list3(fds_script: str, default_fds_param_list: list = None):
+def fds2df(fds_script: str) -> pd.DataFrame:
+    """Converts FDS script to a pandas DataFrame object containing parameterised FDS script for ease processing.
+
+    :param fds_script: FDS script string to be analysed and parameterised.
+    :return: a pandas DataFrame object containing parameterised FDS script.
+    """
+
+    l0, l1 = fds2list(fds_script)
+    d = {i: v for i, v in enumerate(l0)}
+    df = pd.DataFrame.from_dict(d, orient="index", columns=l1)
+
+    return df
+
+
+def fds2list(fds_script: str, default_fds_param_list: list = None):
 
     fds_command_list = re.findall(r"&[\s\S]*?/", fds_script)
 
@@ -44,17 +55,13 @@ def fds2list3(fds_script: str, default_fds_param_list: list = None):
 
         # to work out parameterised fds command (single line) in one-hot format.
         fds_parameterised_liner = [None] * len(fds_param_list_all)
-        fds_parameterised_liner[
-            fds_param_list_all.index("_GROUP")
-        ] = fds_group_param_val[0]
+        fds_parameterised_liner[fds_param_list_all.index("_GROUP")] = fds_group_param_val[0]
         for j in list(range(len(fds_group_param_val)))[1::2]:
             if (
                 "(" in fds_group_param_val[j]
             ):  # ignore array format FDS parameters, i.e. MALT(1,1)
                 continue
-            fds_parameterised_liner[
-                fds_param_list_all.index(fds_group_param_val[j])
-            ] = fds_group_param_val[j + 1]
+            fds_parameterised_liner[fds_param_list_all.index(fds_group_param_val[j])] = fds_group_param_val[j + 1]
 
         fds_param_list_out.append(fds_parameterised_liner)
 

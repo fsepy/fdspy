@@ -38,9 +38,10 @@ def make_sh(
         fds_script = f.read()
 
     # parametrise fds script
-    l0, l1 = fds2list3(fds_script)
-    d = {i: v for i, v in enumerate(l0)}
-    df = pd.DataFrame.from_dict(d, orient="index", columns=l1)
+    # l0, l1 = fds2list(fds_script)
+    # d = {i: v for i, v in enumerate(l0)}
+    # df = pd.DataFrame.from_dict(d, orient="index", columns=l1)
+    df = fds2df(fds_script)
 
     # work out fds file name
     filename_fds = os.path.basename(filepath_fds)
