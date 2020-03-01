@@ -27,3 +27,4 @@
 # Python unittest files
 /.pytest_cache
 fdspy/preprocessor/test.csv
+.DS_Store
