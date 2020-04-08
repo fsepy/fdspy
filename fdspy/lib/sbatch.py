@@ -18,11 +18,12 @@ sh_template = '\n'.join([
     '#SBATCH -p compute',
     '#SBATCH -e error-%j.err',
     '#SBATCH -o output-%j.out',
+    '#SBATCH -N 1',
     '',
     'source {fds_source}',
     'export OMP_NUM_THREADS={n_omp}',
     '',
-    'mpiexec -bootstrap slurm -np $SLURM_NTASKS fds {filename_fds}',
+    'mpiexec -genv FI_PROVIDER=tcp -bootstrap slurm -np $SLURM_NTASKS fds {filename_fds}',
 ])
 
 
