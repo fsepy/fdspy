@@ -1,12 +1,5 @@
-
-import copy
-
 import os
-from typing import Union
-import collections
-import numpy as np
-import pandas as pd
-import plotly.express as pex
+
 from fdspy.lib.fds_script_proc_decoder import *
 
 # sh_template = '''#!/bin/sh\n\n#SBATCH -J {name}\n#SBATCH -n {n_mpi}\n#SBATCH -p compute\n#SBATCH -e error-%j.err\n#SBATCH -o output-%j.out\n\nsource {fds_source}\nexport OMP_NUM_THREADS={n_omp}\nmpiexec -bootstrap slurm -np $SLURM_NTASKS fds {filename_fds}\n'''
@@ -51,7 +44,7 @@ def make_sh(
     job_name = os.path.basename(filepath_fds).replace('.fds', '')
 
     # work out number of mpi
-    print(n_mpi, type(n_mpi))
+    # (n_mpi, type(n_mpi))
     if n_mpi < 1:
         try:
             n_mpi = len(set(df['MPI_PROCESS'].dropna().values))
@@ -69,7 +62,7 @@ def test_make_sh():
     filepath_fds = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     filepath_fds = os.path.join(filepath_fds, 'tests_fds', 'residential_corridor.fds')
 
-    sh = make_sh(filepath_fds= filepath_fds)
+    sh = make_sh(filepath_fds=filepath_fds)
 
     print(sh)
 

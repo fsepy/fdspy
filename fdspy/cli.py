@@ -33,38 +33,55 @@ Commands:
         Will be depreciated. Identical to `fdspy pre`.
 """
 
+import logging
 import os
-import plotly
 import subprocess
-import pandas as pd
-from docopt import docopt
-import plotly.graph_objects as go
-from fdspy.lib.fds_script_proc_decoder import fds2df
-from fdspy.lib.fds_script_proc_analyser import main_cli, fds_analyser_hrr
 
+import pandas as pd
+import plotly
+import plotly.graph_objects as go
+from docopt import docopt
+
+from fdspy.lib.fds_script_proc_analyser import main_cli, fds_analyser_hrr
+from fdspy.lib.fds_script_proc_decoder import fds2df
+
+c_handler = logging.StreamHandler()
+c_handler.setFormatter(
+    logging.Formatter('%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+                      '%Y-%m-%d:%H:%M:%S')
+)
+logger = logging.getLogger('cli')
+logger.setLevel(logging.DEBUG)
+logger.addHandler(c_handler)
+
+logger.info('fdspy cli started')
 
 filepath_fds_source_template = '/home/installs/FDS{}/bin/FDS6VARS.sh'
 
 
 def stats(filepath_fds: str):
-
     dict_out = main_cli(filepath_fds=filepath_fds)
 
     with open(filepath_fds + ".stats.txt", "w+") as f:
         f.write(dict_out["str"])
 
-    plotly.io.write_html(
-        dict_out["fig_hrr"],
-        file=filepath_fds + ".hrr.html",
-        auto_open=False,
-        config={
-            "scrollZoom": False,
-            "displayModeBar": True,
-            "editable": True,
-            "showLink": False,
-            "displaylogo": False,
-        },
-    )
+    if 'fig_hrr' in dict_out:
+        if dict_out['fig_hrr'] is not None:
+            try:
+                plotly.io.write_html(
+                    dict_out["fig_hrr"],
+                    file=filepath_fds + ".hrr.html",
+                    auto_open=False,
+                    config={
+                        "scrollZoom": False,
+                        "displayModeBar": True,
+                        "editable": True,
+                        "showLink": False,
+                        "displaylogo": False,
+                    },
+                )
+            except Exception as e:
+                logger.error(f'Failed to make HRR plot, {e}')
 
     return dict_out
 
@@ -89,7 +106,7 @@ def sbatch(filepath_fds: str, n_omp: int = 1, n_mpi: int = -1, fds_v: str = 671)
 
     # run sh file
     subprocess.Popen(['sbatch', filename_sh], cwd=os.getcwd())
-    print('A job has been submitted: ', ' '.join(['sbatch', filename_sh]))
+    logger.info('A job has been submitted: ', ' '.join(['sbatch', filename_sh]))
 
 
 def post(filepath_fds: str):
@@ -152,24 +169,27 @@ def main():
             try:
                 stats(filepath_fds=helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0])
             except Exception as e:
-                # Just print(e) is cleaner and more likely what you want,
-                # but if you insist on printing message specifically whenever possible...
-                if hasattr(e, "message"):
-                    print(e.message)
-                else:
-                    print(e)
+                logger.error(f'Failed to generate FDS script statistics, {e}')
 
     if arguments["sbatch"]:
         filepath_fds = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
-        stats(filepath_fds=filepath_fds)
-        print('FDS script statistics is successfully generated.')
-        sbatch(
-            filepath_fds=filepath_fds,
-            n_omp=arguments["-o"] or 1,
-            n_mpi=arguments["-p"] or -1,
-            fds_v=arguments["-v"] or 671
-        )
-        print('Shell file is successfully saved and executed.')
+
+        try:
+            stats(filepath_fds=filepath_fds)
+            logger.info('Successfully generated FDS script statistics')
+        except Exception as e:
+            logger.error(f'Failed to generate FDS script statistics, {e}')
+
+        try:
+            sbatch(
+                filepath_fds=filepath_fds,
+                n_omp=arguments["-o"] or 1,
+                n_mpi=arguments["-p"] or -1,
+                fds_v=arguments["-v"] or 671
+            )
+            logger.info('Successfully produced and executed sbatch')
+        except Exception as e:
+            logger.error(f'Failed to execute sbatch, {e}')
 
     if arguments["post"]:
         filepath_fds = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]

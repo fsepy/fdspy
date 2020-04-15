@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import copy
-
-import os
-from typing import Union
 import collections
+import logging
+import os
+
 import numpy as np
-import pandas as pd
 import plotly.express as pex
+
 from fdspy.lib.fds_script_proc_decoder import *
+
+logger = logging.getLogger('cli')
 
 """
 LIMITATIONS
@@ -48,43 +49,54 @@ def fds_analyser(df: pd.DataFrame):
 
     # General Info
     # ============
-    std_out_str.append("-" * 40 + "\n")
-    std_out_str.append("GENERAL STATISTICS\n")
-    std_out_str.append("-" * 40 + "\n")
-    _ = fds_analyser_general(df)
-    _ = "\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n"
-    std_out_str.append(_)
+    try:
+        std_out_str.append("-" * 40 + "\n")
+        std_out_str.append("GENERAL STATISTICS\n")
+        std_out_str.append("-" * 40 + "\n")
+        _ = fds_analyser_general(df)
+        _ = "\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n"
+        std_out_str.append(_)
+    except Exception as e:
+        logger.error(f'Failed to produce GENERAL STATISTICS. Error {str(e)}')
 
     # Mesh statistics
     # ===============
-    std_out_str.append("-" * 40 + "\n")
-    std_out_str.append("MESH STATISTICS\n")
-    std_out_str.append("-" * 40 + "\n")
-    _ = fds_analyser_mesh(df)
-    _ = "\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n"
-    std_out_str.append(_)
+    try:
+        std_out_str.append("-" * 40 + "\n")
+        std_out_str.append("MESH STATISTICS\n")
+        std_out_str.append("-" * 40 + "\n")
+        _ = fds_analyser_mesh(df)
+        _ = "\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n"
+        std_out_str.append(_)
+    except Exception as e:
+        logger.error(f'Failed to produce MESH STATISTICS. Error {str(e)}')
 
     # SLCF statistics
     # ===============
-
-    std_out_str.append("-" * 40 + "\n")
-    std_out_str.append("SLCF STATISTICS\n")
-    std_out_str.append("-" * 40 + "\n")
-    _ = fds_analyser_slcf(df)
-    _ = "\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n"
-    std_out_str.append(_)
+    try:
+        std_out_str.append("-" * 40 + "\n")
+        std_out_str.append("SLCF STATISTICS\n")
+        std_out_str.append("-" * 40 + "\n")
+        _ = fds_analyser_slcf(df)
+        _ = "\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n"
+        std_out_str.append(_)
+    except Exception as e:
+        logger.error(f'Failed to produce SLCF STATISTICS. Error {str(e)}')
 
     # HRR statistics
     # ==============
-
-    std_out_str.append("-" * 40 + "\n")
-    std_out_str.append("HRR STATISTICS\n")
-    std_out_str.append("-" * 40 + "\n")
-    _ = fds_analyser_hrr(df)
-    fig_hrr = fds_analyser_hrr_fig(_)
-    _.pop('time_array')
-    _.pop('hrr_array')
-    std_out_str.append("\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n")
+    fig_hrr = None
+    try:
+        std_out_str.append("-" * 40 + "\n")
+        std_out_str.append("HRR STATISTICS\n")
+        std_out_str.append("-" * 40 + "\n")
+        _ = fds_analyser_hrr(df)
+        fig_hrr = fds_analyser_hrr_fig(_)
+        _.pop('time_array')
+        _.pop('hrr_array')
+        std_out_str.append("\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n")
+    except Exception as e:
+        logger.error(f'Failed to produce HRR STATISTICS. Error {str(e)}')
 
     # Packing up results and return
     # =============================

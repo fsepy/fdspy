@@ -1,5 +1,6 @@
-import re
 import copy
+import re
+
 import pandas as pd
 
 
@@ -86,14 +87,15 @@ def fds2dict_parameterise_single_fds_command(line: str):
         raise ValueError("Multiple lines of command found.")
     else:
         line = line[0]
+
     # EXTRACT GROUP NAME
     # ==================
 
     group_name = re.findall(r"^(\w+) ", line)
     if len(group_name) > 1:
-        raise ValueError("Multiple group names found, only 1 expected: ", group_name)
+        raise ValueError(f"Multiple group names found, only 1 expected: {group_name}")
     elif len(group_name) == 0:
-        raise ValueError("No group name found.")
+        raise ValueError(f"No group name found. {line}")
     else:
         group_name = group_name[0]
     # remove group_name from the line
