@@ -1,4 +1,4 @@
-room_fire_fds = """Room fire test case, based on an actual test conducted for US ATF by the University of Maryland. 
+Room fire test case, based on an actual test conducted for US ATF by the University of Maryland. 
 All material properties are completely fabricated.
 
 &HEAD CHID='room_fire', TITLE='ATF Room Fire Test, SVN $Revision: 3127 $'  / 
@@ -149,4 +149,3 @@ All material properties are completely fabricated.
 
 &TAIL /
 
-"""
