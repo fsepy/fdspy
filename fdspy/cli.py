@@ -205,10 +205,12 @@ def helper_get_list_filepath_end_width(cwd: str, end_with: str) -> list:
 
 def main():
     arguments = docopt(__doc__)
-    print(arguments)
 
+    # get file path
     if arguments["<file_name>"]:
-        fp_fds_raw = arguments["<file_name>"]
+        fp_fds_raw = os.path.realpath(arguments["<file_name>"])
+        if not os.path.isfile(fp_fds_raw):
+            raise ValueError(f'{fp_fds_raw} is not a file or does not exits')
     else:
         fp_fds_raw = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
     with open(fp_fds_raw, 'r') as f:
