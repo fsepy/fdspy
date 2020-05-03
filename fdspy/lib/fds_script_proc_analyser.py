@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import collections
 import logging
+
+logger = logging.getLogger('cli')
+import collections
 import os
 
 import numpy as np
 import plotly.express as pex
 
 from fdspy.lib.fds_script_proc_decoder import *
-
-logger = logging.getLogger('cli')
 
 """
 LIMITATIONS
