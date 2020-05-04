@@ -143,7 +143,7 @@ def sbatch(
 
     # run sh file
     subprocess.Popen(['sbatch', filename_sh], cwd=os.getcwd())
-    logger.info('A job has been submitted: ', ' '.join(['sbatch', filename_sh]))
+    logger.info(f'A job has been submitted: sbatch {filename_sh}')
 
 
 def post(filepath_fds: str):
