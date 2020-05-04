@@ -55,7 +55,6 @@ import subprocess
 import pandas as pd
 import plotly
 import plotly.graph_objects as go
-import termplotlib as tpl
 from docopt import docopt
 
 from fdspy.lib.fds_script_analyser import ModelAnalyser
@@ -164,12 +163,6 @@ def post(filepath_fds: str):
     dict_fds_hrr = fds_analyser_hrr(df)
     time_fds = dict_fds_hrr['time_array']
     hrr_fds = dict_fds_hrr['hrr_array']
-
-    fig = tpl.figure()
-    # fig.plot(time_fds, hrr_fds, label="FDS input", width=50, height=15)
-    fig.plot(time_fds, hrr_fds, label="FDS output", width=50, height=15)
-    fig.show()
-    print('asdfsadfsadfsdafasd')
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=time_fds, y=hrr_fds, mode='lines', name='FDS input'))
