@@ -75,10 +75,27 @@ filepath_fds_source_template = '/home/installs/FDS{}/bin/FDS6VARS.sh'
 
 
 def stats2(analyser: ModelAnalyser):
-    stats_str = analyser.general()
-    stats_str += analyser.mesh()
-    stats_str += analyser.slcf()
-    stats_str += analyser.hrr_plot()
+    stats_str = ''
+
+    try:
+        stats_str = analyser.general()
+    except Exception as e:
+        logger.error(f'Failed to generate statistics `general`, {e}')
+    try:
+        stats_str += analyser.mesh()
+    except Exception as e:
+        logger.error(f'Failed to generate statistics `mesh`, {e}')
+    try:
+        stats_str += analyser.slcf()
+    except Exception as e:
+        logger.error(f'Failed to generate statistics `slcf`, {e}')
+    try:
+        stats_str += analyser.hrr_plot()
+    except Exception as e:
+        logger.error(f'Failed to generate statistics `hrr_plot`, {e}')
+
+    if len(stats_str) == 0:
+        raise ValueError('len(stats_str)==0 no statistics produced')
 
     return stats_str
 
