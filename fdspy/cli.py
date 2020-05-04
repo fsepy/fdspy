@@ -58,7 +58,7 @@ import plotly.graph_objects as go
 from docopt import docopt
 
 from fdspy.lib.fds_script_analyser import ModelAnalyser
-from fdspy.lib.fds_script_proc_analyser import main_cli, fds_analyser_hrr
+from fdspy.lib.fds_script_proc_analyser import fds_analyser_hrr
 from fdspy.lib.fds_script_proc_decoder import fds2df
 
 c_handler = logging.StreamHandler()
@@ -83,31 +83,31 @@ def stats2(analyser: ModelAnalyser):
     return stats_str
 
 
-def stats(filepath_fds: str):
-    dict_out = main_cli(filepath_fds=filepath_fds)
-
-    with open(filepath_fds + ".stats.txt", "w+") as f:
-        f.write(dict_out["str"])
-
-    if 'fig_hrr' in dict_out:
-        if dict_out['fig_hrr'] is not None:
-            try:
-                plotly.io.write_html(
-                    dict_out["fig_hrr"],
-                    file=filepath_fds + ".hrr.html",
-                    auto_open=False,
-                    config={
-                        "scrollZoom": False,
-                        "displayModeBar": True,
-                        "editable": True,
-                        "showLink": False,
-                        "displaylogo": False,
-                    },
-                )
-            except Exception as e:
-                logger.error(f'Failed to make HRR plot, {e}')
-
-    return dict_out
+# def stats(filepath_fds: str):
+#     dict_out = main_cli(filepath_fds=filepath_fds)
+#
+#     with open(filepath_fds + ".stats.txt", "w+") as f:
+#         f.write(dict_out["str"])
+#
+#     if 'fig_hrr' in dict_out:
+#         if dict_out['fig_hrr'] is not None:
+#             try:
+#                 plotly.io.write_html(
+#                     dict_out["fig_hrr"],
+#                     file=filepath_fds + ".hrr.html",
+#                     auto_open=False,
+#                     config={
+#                         "scrollZoom": False,
+#                         "displayModeBar": True,
+#                         "editable": True,
+#                         "showLink": False,
+#                         "displaylogo": False,
+#                     },
+#                 )
+#             except Exception as e:
+#                 logger.error(f'Failed to make HRR plot, {e}')
+#
+#     return dict_out
 
 
 def sbatch(
@@ -206,8 +206,13 @@ def main():
             raise ValueError(f'{fp_fds_raw} is not a file or does not exits')
     else:
         fp_fds_raw = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
-    with open(fp_fds_raw, 'r') as f:
-        analyser = ModelAnalyser(fds_raw=f.read())
+
+    try:
+        with open(fp_fds_raw, 'r') as f:
+            analyser = ModelAnalyser(fds_raw=f.read())
+    except Exception as e:
+        logger.error(f'Failed to instantiate ModelAnalyser, {e}')
+        analyser = None
 
     if arguments["stats"] or arguments["pre"] or arguments['sbatch']:
         try:
@@ -245,5 +250,4 @@ def main():
             logger.error(f'Failed to execute sbatch, {e}')
 
     if arguments["post"]:
-        fp_fds_raw = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
         post(fp_fds_raw)
