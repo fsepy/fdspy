@@ -254,15 +254,16 @@ class AsciiPlot:
 
 
 def _test_asciiplot():
-    size = (80, 15)
-    xlim = (-0.5, 1.5)
-    ylim = (-0.5, 1.5)
+    size = (80, 25)
+    xlim = (-2*np.pi, 2*np.pi)
+    ylim = (-1.1, 1.1)
 
     aplot = AsciiPlot(size=size)
 
+    x = np.linspace(-2*np.pi, 2*np.pi, 50)
     aplot.plot(
-        x=[0, 1],
-        y=[0, 1],
+        x=x,
+        y=np.sin(x),
         xlim=xlim,
         ylim=ylim,
     ).show()
