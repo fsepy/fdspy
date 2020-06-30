@@ -57,7 +57,7 @@ import plotly
 import plotly.graph_objects as go
 from docopt import docopt
 
-from fdspy.lib.fds_script_analyser import ModelAnalyser
+from fdspy.lib.fds_script_analyser import FDSAnalyser
 from fdspy.lib.fds_script_proc_analyser import fds_analyser_hrr
 from fdspy.lib.fds_script_proc_decoder import fds2df
 
@@ -74,7 +74,7 @@ logger.info('fdspy cli started')
 filepath_fds_source_template = '/home/installs/FDS{}/bin/FDS6VARS.sh'
 
 
-def stats2(analyser: ModelAnalyser):
+def stats2(analyser: FDSAnalyser):
     stats_str = ''
 
     try:
@@ -226,7 +226,7 @@ def main():
 
     try:
         with open(fp_fds_raw, 'r') as f:
-            analyser = ModelAnalyser(fds_raw=f.read())
+            analyser = FDSAnalyser(fds_raw=f.read())
     except Exception as e:
         logger.error(f'Failed to instantiate ModelAnalyser, {e}')
         analyser = None
