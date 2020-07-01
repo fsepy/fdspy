@@ -100,33 +100,6 @@ def stats2(analyser: FDSAnalyser):
     return stats_str
 
 
-# def stats(filepath_fds: str):
-#     dict_out = main_cli(filepath_fds=filepath_fds)
-#
-#     with open(filepath_fds + ".stats.txt", "w+") as f:
-#         f.write(dict_out["str"])
-#
-#     if 'fig_hrr' in dict_out:
-#         if dict_out['fig_hrr'] is not None:
-#             try:
-#                 plotly.io.write_html(
-#                     dict_out["fig_hrr"],
-#                     file=filepath_fds + ".hrr.html",
-#                     auto_open=False,
-#                     config={
-#                         "scrollZoom": False,
-#                         "displayModeBar": True,
-#                         "editable": True,
-#                         "showLink": False,
-#                         "displaylogo": False,
-#                     },
-#                 )
-#             except Exception as e:
-#                 logger.error(f'Failed to make HRR plot, {e}')
-#
-#     return dict_out
-
-
 def sbatch(
         filepath_fds: str,
         n_omp: int,
@@ -250,7 +223,7 @@ def main():
 
             n_omp = arguments['-o'] if arguments['-o'] else 1
             n_mpi = arguments["-p"] if arguments["-p"] else n_mpi
-            fds_v = arguments['-v'] if arguments['-v'] else 671
+            fds_v = arguments['-v'] if arguments['-v'] else '671'
             mail_type = arguments['--mail-type'] if arguments['--mail-type'] else 'NONE'
             mail_user = arguments['--mail-user'] if arguments['--mail-user'] else 'NONE'
 
@@ -258,7 +231,7 @@ def main():
                 filepath_fds=fp_fds_raw,
                 n_omp=int(n_omp),
                 n_mpi=int(n_mpi),
-                fds_v=(fds_v),
+                fds_v=fds_v,
                 mail_type=mail_type,
                 mail_user=mail_user
             )
