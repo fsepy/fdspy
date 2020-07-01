@@ -1,6 +1,6 @@
 import logging
 from os.path import join, dirname
-from typing import List, Iterable
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -18,7 +18,8 @@ class FDSTravellingFireMaker(FDSBaseModel):
     def make_travelling_fire(
             self,
             id_common_prefix: List[str],
-            ignition_origin: List[Iterable[float]],
+            ignition_origin: List[Tuple[float, float, float]],
+            ignition_time: List[float],
             spread_speed: List[float],
             burning_time: List[float]
     ):
@@ -32,6 +33,7 @@ class FDSTravellingFireMaker(FDSBaseModel):
                 fds_df=fds_df,
                 id_common_prefix=id_common_prefix[i],
                 ignition_origin=ignition_origin[i],
+                ignition_time=ignition_time[i],
                 spread_speed=spread_speed[i],
                 burning_time=burning_time[i]
             )
@@ -42,7 +44,8 @@ class FDSTravellingFireMaker(FDSBaseModel):
     def _make_travelling_fire(
             fds_df: pd.DataFrame,
             id_common_prefix: str,
-            ignition_origin: Iterable[float],
+            ignition_origin: Tuple[float, float, float],
+            ignition_time: float,
             spread_speed: float,
             burning_time: float
     ) -> pd.DataFrame:
@@ -52,6 +55,15 @@ class FDSTravellingFireMaker(FDSBaseModel):
         for i in ['CTRL_ID', 'FUNCTION_TYPE', 'RAMP_ID', 'LATCH', 'INPUT_ID', 'T', 'F']:
             if i not in list(fds_df):
                 fds_df[i] = None
+
+        # make TIME devc
+        x1, x2, y1, y2, z1, z2 = [float(i) for i in fds_df[fds_df['_GROUP'] == 'MESH'].iloc[0]['XB'].split(',')]
+        devc = dict(
+            _GROUP='DEVC',
+            ID=f"'{id_common_prefix}_devc'",
+            QUANTITY="'TIME'",
+            XYZ=f'{(x1 + x2) / 2:.1f},{(y1 + y2) / 2:.1f},{(z1 + z2) / 2:.1f}'
+        )
 
         ctrls = list()
         ramps = list()
@@ -66,7 +78,7 @@ class FDSTravellingFireMaker(FDSBaseModel):
 
             # Calculate start time t1 and end time t2
             d = ((x - ignition_origin[0]) ** 2 + (y - ignition_origin[1]) ** 2) ** 0.5
-            t1 = d / spread_speed
+            t1 = d / spread_speed + ignition_time
             t2 = t1 + burning_time
 
             # Make CTRL
@@ -80,7 +92,6 @@ class FDSTravellingFireMaker(FDSBaseModel):
                     INPUT_ID=f"'{id_common_prefix}_devc'",
                 )
             )
-            # print(ctrl)
 
             # Make RAMP
             for i in range(4):
@@ -91,19 +102,9 @@ class FDSTravellingFireMaker(FDSBaseModel):
                     F=f"{1 if 1 <= i <= 2 else -1:.1f}",
                 )
                 ramps.append(ramp)
-                # print(ramps[-1])
 
             # set CTRL_ID for vent
             fds_df.iloc[index]['CTRL_ID'] = f"'{id_}'"
-
-        # make TIME device
-        x1, x2, y1, y2, z1, z2 = [float(i) for i in fds_df[fds_df['_GROUP'] == 'MESH'].iloc[0]['XB'].split(',')]
-        devc = dict(
-            _GROUP='DEVC',
-            ID=f"'{id_common_prefix}_devc'",
-            QUANTITY="'TIME'",
-            XYZ=f'{(x1 + x2) / 2:.1f},{(y1 + y2) / 2:.1f},{(z1 + z2) / 2:.1f}'
-        )
 
         fds_df_new = pd.DataFrame.from_dict(ctrls + ramps + [devc])
 
@@ -122,23 +123,55 @@ class FDSTravellingFireMaker(FDSBaseModel):
         return fds_df
 
 
-if __name__ == '__main__':
+def __test_travelling_fire_line():
     from fdspy import __root_dir__
 
-    with open(join(dirname(__root_dir__), 'tests', 'fds_scripts', 'travelling_fire.fds'), 'r') as f:
-        fds_raw = f.read()
-    id_common_prefix = 'travelling_fire'
-    ignition_origin = (0, 0.5, 0)
-    spread_speed = 0.2
+    fp_fds_raw = join(dirname(__root_dir__), 'tests', 'fds_scripts', 'travelling_fire-line.fds')
 
-    test = FDSTravellingFireMaker(
-        fds_raw=fds_raw
-    )
+    with open(fp_fds_raw, 'r') as f:
+        fds_raw = f.read()
+
+    test = FDSTravellingFireMaker(fds_raw=fds_raw)
     res = test.make_travelling_fire(
         id_common_prefix=['travelling_fire'],
         ignition_origin=[(0, 0.5, 0), ],
+        ignition_time=[0],
         spread_speed=[0.2],
         burning_time=[10]
     )
 
-    print(res)
+    from os.path import basename
+    with open(join(dirname(fp_fds_raw), basename(fp_fds_raw.replace('.fds', '.out.fds'))), 'w+') as f:
+        f.write(res)
+
+
+def __test_travelling_fire_1cw():
+    from fdspy import __root_dir__
+
+    fp_fds_raw = join(dirname(__root_dir__), 'tests', 'fds_scripts', 'travelling_fire-1cw.fds')
+
+    with open(fp_fds_raw, 'r') as f:
+        fds_raw = f.read()
+
+    test = FDSTravellingFireMaker(fds_raw=fds_raw)
+    res = test.make_travelling_fire(
+        # id_common_prefix=['travelling_fire_a', 'travelling_fire_b', 'travelling_fire_c'],
+        # ignition_origin=[(3.3, 46.7, 3.82), (24.3, 28.7, 3.82), (36.3, 27.7, 3.82)],
+        # ignition_time=[0, 10, 20],
+        # spread_speed=[0.5, 0.1, 1],
+        # burning_time=[10, 10, 10]
+        id_common_prefix=['travelling_fire',],
+        ignition_origin=[(3.3, 46.7, 3.82),],
+        ignition_time=[0,],
+        spread_speed=[1,],
+        burning_time=[10,]
+    )
+
+    from os.path import basename
+    with open(join(dirname(fp_fds_raw), basename(fp_fds_raw.replace('.fds', '.out.fds'))), 'w+') as f:
+        f.write(res)
+
+
+if __name__ == '__main__':
+    __test_travelling_fire_line()
+    __test_travelling_fire_1cw()
