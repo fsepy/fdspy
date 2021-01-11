@@ -1,6 +1,24 @@
 from os import path
+import logging
 
 __root_dir__ = path.dirname(path.realpath(__file__))
+
+
+# setup logger
+def __get_logger():
+    logger_ = logging.getLogger('gui')
+
+    c_handler = logging.StreamHandler()
+    c_handler.setLevel(logging.DEBUG)
+    c_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s'))
+    logger_.addHandler(c_handler)
+
+    logger_.setLevel(logging.INFO)
+
+    return logger_
+
+
+logger = __get_logger()
 
 """
 VERSION IDENTIFICATION RULES DOCUMENTED IN PEP 440 ARE FOLLOWED.
