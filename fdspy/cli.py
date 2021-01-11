@@ -4,11 +4,13 @@ Usage:
     fdspy post [<file_name>]
     fdspy sbatch [-o=<int>] [-p=<int>] [--mail-type=<str>] [--mail-user=<str>] [-v=<int_str>] [<file_name>]
     fdspy stats [<file_name>]
+    fdspy out [--timestats] [<file_name>]
 
 Examples:
     fdspy pre
     fdspy sbatch
     fdspy sbatch -o=2 -p=10 -v=671 --mail-type=END --mail-user=user@email.com example.fds
+    fdspy out --timestats example.out
 
 Options:
     -h --help
@@ -32,6 +34,8 @@ Options:
     --mail-user=<str>
         Optional. User to receive email notification of state changes as defined by --mail-type. The default value is
         the submitting user.
+    --timestats
+        Produce simulation time statistics, saved as `file_name.timestats.csv`.
     <file_name>
         Optional. Input file name (including extension), use first file found in the directory if not provided.
 
@@ -45,10 +49,11 @@ Commands:
         To perform `fdspy stats`, generate a `sbatch` shell script file and run the shell script file with `sbash`.
     fdspy stats
         Will be DEPRECIATED. Identical to `fdspy pre`.
+    fdspy out
+        Process *.out file
 """
 
 import copy
-import logging
 import os
 import subprocess
 
@@ -57,19 +62,11 @@ import plotly
 import plotly.graph_objects as go
 from docopt import docopt
 
+from fdspy import logger
+from fdspy.lib.fds_out_analyser import FDSOutBaseModel
 from fdspy.lib.fds_script_analyser import FDSAnalyser
 from fdspy.lib.fds_script_proc_analyser import fds_analyser_hrr
 from fdspy.lib.fds_script_proc_decoder import fds2df
-
-c_handler = logging.StreamHandler()
-c_handler.setFormatter(
-    logging.Formatter('%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-                      '%Y-%m-%d:%H:%M:%S')
-)
-logger = logging.getLogger('cli')
-logger.setLevel(logging.DEBUG)
-logger.addHandler(c_handler)
-logger.info('fdspy cli started')
 
 filepath_fds_source_template = '/home/installs/FDS{}/bin/FDS6VARS.sh'
 
@@ -137,7 +134,6 @@ def sbatch(
 
 
 def post(filepath_fds: str):
-
     # get expected *_hrr.csv file name
     with open(filepath_fds, 'r') as f:
         df = fds2df(f.read())
@@ -189,25 +185,28 @@ def helper_get_list_filepath_end_width(cwd: str, end_with: str) -> list:
 def main():
     arguments = docopt(__doc__)
 
+    logger.debug(f'\n{arguments}')
+
     # get file path
     if arguments["<file_name>"]:
-        fp_fds_raw = os.path.realpath(arguments["<file_name>"])
-        if not os.path.isfile(fp_fds_raw):
-            raise ValueError(f'{fp_fds_raw} is not a file or does not exits')
+        file_name = os.path.realpath(arguments["<file_name>"])
+        if not os.path.isfile(file_name):
+            raise ValueError(f'{file_name} is not a file or does not exits')
     else:
-        fp_fds_raw = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
+        file_name = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
 
-    try:
-        with open(fp_fds_raw, 'r') as f:
-            analyser = FDSAnalyser(fds_raw=f.read())
-    except Exception as e:
-        logger.error(f'Failed to instantiate ModelAnalyser, {e}')
-        analyser = None
+    if any([arguments[i] for i in ['pre', 'post', 'sbatch', 'stats']]):
+        try:
+            with open(file_name, 'r') as f:
+                analyser = FDSAnalyser(fds_raw=f.read())
+        except Exception as e:
+            logger.error(f'Failed to instantiate ModelAnalyser, {e}')
+            analyser = None
 
     if arguments["stats"] or arguments["pre"] or arguments['sbatch']:
         try:
             stats_string = stats2(analyser)
-            with open(fp_fds_raw + ".stats.txt", "w+", encoding='utf-8') as f:
+            with open(file_name + ".stats.txt", "w+", encoding='utf-8') as f:
                 f.write(stats_string)
             logger.info('Successfully generated FDS script statistics' + '\n' + stats_string)
         except Exception as e:
@@ -228,7 +227,7 @@ def main():
             mail_user = arguments['--mail-user'] if arguments['--mail-user'] else 'NONE'
 
             sbatch(
-                filepath_fds=fp_fds_raw,
+                filepath_fds=file_name,
                 n_omp=int(n_omp),
                 n_mpi=int(n_mpi),
                 fds_v=fds_v,
@@ -240,4 +239,11 @@ def main():
             logger.error(f'Failed to execute sbatch, {e}')
 
     if arguments["post"]:
-        post(fp_fds_raw)
+        post(file_name)
+
+    if arguments["out"]:
+        model = FDSOutBaseModel()
+        with open(file_name, 'r') as f_:
+            fds_out = f_.read()
+        model.read_fds_out(fds_out)
+        model.make_simulation_time_stats(fp_csv=os.path.realpath(file_name.replace('.out', '') + '.timestats.csv'))

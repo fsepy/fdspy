@@ -6,6 +6,7 @@ def test_fds2dict_parameterise_single_fds_command():
         fds2dict_parameterise_single_fds_command as ff,
     )
 
+
     def fff(line_):
         line_ = ff(line_)
         if isinstance(line_, list):

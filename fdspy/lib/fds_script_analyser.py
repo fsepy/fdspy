@@ -277,7 +277,7 @@ class FDSAnalyser(FDSBaseModel):
         self.__print_width = v
 
 
-def __test_FDSAnalyser():
+def _test_FDSAnalyser():
     from os import path
     import fdspy
 
@@ -295,4 +295,4 @@ def __test_FDSAnalyser():
 
 
 if __name__ == '__main__':
-    __test_FDSAnalyser()
+    _test_FDSAnalyser()

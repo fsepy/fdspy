@@ -15,6 +15,25 @@ class FDSBaseModel(ABC):
         self.fds_raw = fds_raw
         self.fds_df = self._fds2df(fds_raw)
 
+    def __repr__(self):
+        # Instantiate containers for label `l1` and value `l2`
+        l1, l2 = list(), list()
+
+        # Make labels and values
+        l1.append('CHID'), l2.append(f'{self.fds_df.loc[self.fds_df["CHID"].notnull()]["CHID"][0]}')
+        l1.append('No. of lines (exclude blank and comment lines)'), l2.append(f'{len(self.fds_df):d}')
+        l1.append('No. of unique head parameters'), l2.append(f'{len(list(set(self.fds_df["_GROUP"]))):d} {list(set(self.fds_df["_GROUP"]))}')
+        l1.append('No. of unique parameters (exclude head)'), l2.append(f'{len(self.fds_df.columns)-1:d}')  # -1 to exclude _GROUP which
+
+        # Calculate max length of label and value
+        l1_n_char = max(map(len, l1))
+        l2_n_char = max(map(len, l2))
+
+        # Make a string consisted of labels and values
+        stats = '\n'.join([f'{l1[i]:<{l1_n_char:d}}  {l2[i]:<{l2_n_char:d}.{l2_n_char:d}}' for i in range(len(l1))])
+
+        return stats
+
     @staticmethod
     def _fds2df(fds_raw: str) -> pd.DataFrame:
         """Converts FDS script to a pandas DataFrame object containing parameterised FDS script for ease processing.
@@ -167,27 +186,27 @@ class FDSBaseModel(ABC):
         self.__fds_df = v
 
 
-def __test_FDSBaseModel_fds2list_single_line():
-    from fdspy.lib.fds_script_proc_analyser import (
-        fds2dict_parameterise_single_fds_command as ff,
-    )
-    ff = FDSBaseModel._fds2list_single_line
+def _test_fds2list_single_line():
+    fds2list_single_line = FDSBaseModel._fds2list_single_line
 
-    def fff(line_):
-        line_ = ff(line_)
+    def len_fds2list_single_line(line_):
+        line_ = fds2list_single_line(line_)
         if isinstance(line_, list):
             return len(line_)
         elif line_ is None:
             return None
 
     line = r"&HEAD CHID='moe1'/"
-    assert fff(line) == 3
+    print(fds2list_single_line(line))
+    assert len_fds2list_single_line(line) == 3
 
     line = r"&TIME T_END=400.0, RESTRICT_TIME_STEP=.FALSE./"
-    assert fff(line) == 5
+    print(fds2list_single_line(line))
+    assert len_fds2list_single_line(line) == 5
 
     line = r"&MESH ID='stair upper02', IJK=7,15,82, XB=4.2,4.9,-22.0,-20.5,11.1,19.3, MPI_PROCESS=0/"
-    assert fff(line) == 9
+    print(fds2list_single_line(line))
+    assert len_fds2list_single_line(line) == 9
 
     line = r"""
     &PART ID='Tracer',
@@ -195,19 +214,24 @@ def __test_FDSBaseModel_fds2list_single_line():
           MONODISPERSE=.TRUE.,
           AGE=60.0/
     """
-    assert fff(line) == 9
+    print(fds2list_single_line(line))
+    assert len_fds2list_single_line(line) == 9
 
     line = r"&CTRL ID='invert', FUNCTION_TYPE='ALL', LATCH=.FALSE., INITIAL_STATE=.TRUE., INPUT_ID='ventilation'/"
-    assert fff(line) == 11
+    print(fds2list_single_line(line))
+    assert len_fds2list_single_line(line) == 11
 
     line = r"&HOLE ID='door - stair_bottom', XB=3.0,3.4,-23.1,-22.3,4.9,6.9/ "
-    assert fff(line) == 5
+    print(fds2list_single_line(line))
+    assert len_fds2list_single_line(line) == 5
 
     line = r"&SLCF QUANTITY='TEMPERATURE', VECTOR=.TRUE., PBX=3.4/"
-    assert fff(line) == 7
+    print(fds2list_single_line(line))
+    assert len_fds2list_single_line(line) == 7
 
     line = r"&TAIL /"
-    assert fff(line) == 1
+    print(fds2list_single_line(line))
+    assert len_fds2list_single_line(line) == 1
 
     line = r"""
     &SURF ID='LINING CONCRETE',
@@ -217,39 +241,27 @@ def __test_FDSBaseModel_fds2list_single_line():
           MATL_MASS_FRACTION(1,1)=1.0,
           THICKNESS(1)=0.2/
     """
-    assert fff(line) == 13
+    print(fds2list_single_line(line))
+    assert len_fds2list_single_line(line) == 13
 
     line = r"""&TIME T_END=400.0, RESTRICT_TIME_STEP=.FALSE./"""
-    assert ff(line)[3] == "RESTRICT_TIME_STEP"
+    print(fds2list_single_line(line))
+    assert fds2list_single_line(line)[3] == "RESTRICT_TIME_STEP"
 
 
-def __test_FDSBaseModel_fds2df():
-    from os import path
-    import fdspy
-
-    fp_fds = path.join(path.dirname(fdspy.__root_dir__), 'tests', 'fds_scripts', 'general-residential_corridor.fds')
-
-    with open(fp_fds, 'r') as f:
-        fds_raw = f.read()
-
-    model = FDSBaseModel(fds_raw)
+def _test_fds2df():
+    from fdspy.tests.fds_scripts import general_residential_corridor
+    FDSBaseModel(general_residential_corridor)
 
 
-def __test_FDSBaseModel_df2fds():
-    from os import path
-    import fdspy
-
-    fp_fds = path.join(path.dirname(fdspy.__root_dir__), 'tests', 'fds_scripts', 'travelling_fire.fds')
-    with open(fp_fds, 'r') as f:
-        fds_raw = f.read()
-
-    model = FDSBaseModel(fds_raw)
-    res = FDSBaseModel._df2fds(model.fds_df)
-
-    print(res)
+def _test_df2fds():
+    from fdspy.tests.fds_scripts import travelling_fire_1cw
+    model = FDSBaseModel(travelling_fire_1cw)
+    print(model)
+    FDSBaseModel._df2fds(model.fds_df)
 
 
 if __name__ == '__main__':
-    __test_FDSBaseModel_fds2list_single_line()
-    __test_FDSBaseModel_fds2df()
-    __test_FDSBaseModel_df2fds()
+    _test_fds2list_single_line()
+    _test_fds2df()
+    _test_df2fds()
