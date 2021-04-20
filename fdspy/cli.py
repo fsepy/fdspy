@@ -200,7 +200,7 @@ def main():
             with open(file_name, 'r') as f:
                 analyser = FDSAnalyser(fds_raw=f.read())
         except Exception as e:
-            logger.error(f'Failed to instantiate ModelAnalyser, {e}')
+            logger.error(f'Failed to instantiate FDSAnalyser, {e}')
             analyser = None
 
     if arguments["stats"] or arguments["pre"] or arguments['sbatch']:
@@ -217,7 +217,8 @@ def main():
             try:
                 df = copy.copy(analyser.fds_df)
                 n_mpi = len(set(df['MPI_PROCESS'].dropna().values))
-            except KeyError:
+            except Exception as e:
+                logger.info(f'Failed to parse MPI_PROCESS from FDSAnalyser, n_mpi set to 1, {e}')
                 n_mpi = 1
 
             n_omp = arguments['-o'] if arguments['-o'] else 1
