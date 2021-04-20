@@ -281,7 +281,7 @@ def _test_FDSAnalyser():
     from os import path
     import fdspy
 
-    fp_fds = path.join(path.dirname(fdspy.__root_dir__), 'tests', 'fds_scripts', 'general-residential_corridor.fds')
+    fp_fds = path.join(fdspy.__root_dir__, 'tests', 'fds_scripts', 'general-residential_corridor.fds')
 
     with open(fp_fds, 'r') as f:
         fds_raw = f.read()
