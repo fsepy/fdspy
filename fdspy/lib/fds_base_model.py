@@ -1,10 +1,53 @@
 import logging
 import re
 from abc import ABC
+from typing import Union
 
 import pandas as pd
 
 logger = logging.getLogger('cli')
+
+
+class MESH(ABC):
+    def __init__(self, ID: str, IJK: Union[list, tuple], XB:Union[list, tuple], **kwargs):
+        self.id = ID
+
+        if isinstance(IJK, str):
+            IJK = [float(i) for i in IJK.split(',')]
+
+        if isinstance(XB, str):
+            XB = [float(i) for i in XB.split(',')]
+
+        try:
+            self.x1, self.x2, self.y1, self.y2, self.z1, self.z2 = XB
+        except Exception as e:
+            raise ValueError(f'Error potentially due to XB ({XB}) is not at the right length, {e}')
+        try:
+            self.i, self.j, self.k = IJK
+        except Exception as e:
+            raise ValueError(f'Error potentially due to XB ({XB}) is not at the right length, {e}')
+
+        self.misc_kwargs = kwargs
+
+    def __repr__(self):
+        return self.id
+
+    def __lt__(self, other) -> bool:
+        return check_overlap_3d_ortho(
+            self.x1, self.y1, self.z1,
+            self.x2, self.y2, self.z2,
+            other.x1, other.y1, other.z1,
+            other.x2, other.y2, other.z2
+        )
+
+    def __gt__(self, other):
+        return self.__lt__(other=other)
+
+    def size_cell(self):
+        return self.i * self.j * self.k
+
+    def size_volume(self):
+        return abs(self.x1-self.x2) * abs(self.y1-self.y2) * abs(self.z1-self.z2)
 
 
 class FDSBaseModel(ABC):
@@ -23,7 +66,7 @@ class FDSBaseModel(ABC):
         l1.append('CHID'), l2.append(f'{self.fds_df.loc[self.fds_df["CHID"].notnull()]["CHID"][0]}')
         l1.append('No. of lines (exclude blank and comment lines)'), l2.append(f'{len(self.fds_df):d}')
         l1.append('No. of unique head parameters'), l2.append(f'{len(list(set(self.fds_df["_GROUP"]))):d} {list(set(self.fds_df["_GROUP"]))}')
-        l1.append('No. of unique parameters (exclude head)'), l2.append(f'{len(self.fds_df.columns)-1:d}')  # -1 to exclude _GROUP which
+        l1.append('No. of unique parameters (exclude head)'), l2.append(f'{len(self.fds_df.columns)-1:d} {list(self.fds_df.columns)}')  # -1 to exclude _GROUP which
 
         # Calculate max length of label and value
         l1_n_char = max(map(len, l1))
@@ -251,17 +294,249 @@ def _test_fds2list_single_line():
 
 def _test_fds2df():
     from fdspy.tests.fds_scripts import general_residential_corridor
-    FDSBaseModel(general_residential_corridor)
+    model = FDSBaseModel(general_residential_corridor)
+    print(model)
 
 
 def _test_df2fds():
     from fdspy.tests.fds_scripts import travelling_fire_1cw
     model = FDSBaseModel(travelling_fire_1cw)
-    print(model)
-    FDSBaseModel._df2fds(model.fds_df)
+    # print(model)
+    # print(FDSBaseModel._df2fds(model.fds_df))
+
+    df_fds = model.fds_df.copy()
+    print(df_fds.loc[df_fds['_GROUP'] == 'MESH'])
+
+    meshes = list()
+    for index, row in df_fds.loc[df_fds['_GROUP'] == 'MESH'].iterrows():
+        row.dropna(inplace=True)
+        line_dict = row.to_dict()
+        meshes.append(MESH(**line_dict))
+
+    print(meshes)
+
+    edges = list()
+    for i, mesh in enumerate(meshes):
+        edges.append(list())
+        for j, mesh_ in enumerate(meshes):
+            if mesh < mesh_:
+                edges[-1].append(j)
+    print(edges)
+
+    weights = [i.size_cell() for i in meshes]
+    print(weights)
+
+
+def _test_mesh_optimiser():
+
+    from fdspy.tests.fds_scripts import mesh_optimiser_0
+    model = FDSBaseModel(mesh_optimiser_0)
+
+    df_fds = model.fds_df.copy()
+    print(df_fds.loc[df_fds['_GROUP'] == 'MESH'])
+
+    meshes = list()
+    for index, row in df_fds.loc[df_fds['_GROUP'] == 'MESH'].iterrows():
+        row.dropna(inplace=True)
+        line_dict = row.to_dict()
+        meshes.append(MESH(**line_dict))
+
+    print(meshes)
+
+    edges = list()
+    for i, mesh in enumerate(meshes):
+        edges.append(list())
+        for j, mesh_ in enumerate(meshes):
+            if mesh < mesh_:
+                edges[-1].append(j)
+    print(edges)
+
+    weights = [i.size_cell() for i in meshes]
+    print(weights)
+
+
+def check_overlap_2d_ortho(x1: float, x2: float, y1: float, y2: float, x3: float, x4: float, y3: float, y4: float) -> bool:
+    """
+    For given two rectangles defined by (x1, y1) -> (x2, y2) and (x3, y3) -> (x4, y4), find if they overlap with each
+    other.
+
+    :param x1:
+    :param x2:
+    :param y1:
+    :param y2:
+    :param x3:
+    :param x4:
+    :param y3:
+    :param y4:
+    :return:
+    """
+    
+    x3 = (x1 < x3 < x2) or (x1 > x3 > x2)
+    x4 = (x1 < x4 < x2) or (x1 > x4 > x2)
+    y3 = (y1 < y3 < y2) or (y1 > y3 > y2)
+    y4 = (y1 < y4 < y2) or (y1 > y4 > y2)
+
+    # Check if any vertices of rectangle 2 (x3, y3) -> (x4, y4) is with in rectangle 1 (x1, y1) -> (x2, y2)
+    for i in (x3, x4):
+        for j in (y3, y4):
+            if i is True and j is True:
+                return True
+    
+    return False
+
+
+def _test_check_overlap_2d_ortho():
+    input_answer = list()
+    # test: separated
+    x1, y1 = 0, 0
+    x2, y2 = 1, 1
+    x3, y3 = 2, 2
+    x4, y4 = 3, 3
+    input_answer.append(((x1, x2, y1, y2, x3, x4, y3, y4), False))
+    # test: point overlap
+    x1, y1 = 0, 0
+    x2, y2 = 1, 1
+    x3, y3 = 1, 1
+    x4, y4 = 3, 3
+    input_answer.append(((x1, x2, y1, y2, x3, x4, y3, y4), False))
+    # test: edge overlap
+    x1, y1 = 0, 0
+    x2, y2 = 1, 1
+    x3, y3 = 0, 1
+    x4, y4 = 1, 3
+    input_answer.append(((x1, x2, y1, y2, x3, x4, y3, y4), False))
+    # test: area overlap, single corner overlap
+    x1, y1 = 0, 0
+    x2, y2 = 1, 1
+    x3, y3 = 0.5, 0.5
+    x4, y4 = 1, 1
+    input_answer.append(((x1, x2, y1, y2, x3, x4, y3, y4), True))
+    # test: area overlap, edge area overlap
+    x1, y1 = 0, 0
+    x2, y2 = 1, 1
+    x3, y3 = 0.1, -1
+    x4, y4 = 0.8, 0.5
+    input_answer.append(((x1, x2, y1, y2, x3, x4, y3, y4), True))
+    # test: area overlap, all within
+    x1, y1 = 0, 0
+    x2, y2 = 1, 1
+    x3, y3 = 0.1, 0.1
+    x4, y4 = 0.8, 0.5
+    input_answer.append(((x1, x2, y1, y2, x3, x4, y3, y4), True))
+
+    for input, answer in input_answer:
+        result = check_overlap_2d_ortho(*input)
+        print(input, result)
+        assert answer == result
+
+
+def check_contact_3d_ortho(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4):
+
+    if x3 == x1
+
+
+    if x1 == x3 and y1 == y3 and z1 == z3 and x2 == x4 and y2 == y4 and z2 == z4:
+        return True
+
+    x3 = (x1 < x3 < x2) or (x1 > x3 > x2)
+    x4 = (x1 < x4 < x2) or (x1 > x4 > x2)
+    y3 = (y1 < y3 < y2) or (y1 > y3 > y2)
+    y4 = (y1 < y4 < y2) or (y1 > y4 > y2)
+    z3 = (z1 < z3 < z2) or (z1 > z3 > z2)
+    z4 = (z1 < z4 < z2) or (z1 > z4 > z2)
+
+    for i in (x3, x4):
+        if i is False:
+            continue
+        for j in (y3, y4):
+            if j is False:
+                continue
+            for k in (z3, z4):
+                if k is False:
+                    continue
+                else:
+                    return True
+
+    return False
+
+def check_overlap_3d_ortho(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4):
+
+    if x1 == x3 and y1 == y3 and z1 == z3 and x2 == x4 and y2 == y4 and z2 == z4:
+        return True
+
+    x3 = (x1 < x3 < x2) or (x1 > x3 > x2)
+    x4 = (x1 < x4 < x2) or (x1 > x4 > x2)
+    y3 = (y1 < y3 < y2) or (y1 > y3 > y2)
+    y4 = (y1 < y4 < y2) or (y1 > y4 > y2)
+    z3 = (z1 < z3 < z2) or (z1 > z3 > z2)
+    z4 = (z1 < z4 < z2) or (z1 > z4 > z2)
+
+    for i in (x3, x4):
+        if i is False:
+            continue
+        for j in (y3, y4):
+            if j is False:
+                continue
+            for k in (z3, z4):
+                if k is False:
+                    continue
+                else:
+                    return True
+
+
+
+    return False
+
+
+def _test_check_overlap_3d_ortho():
+
+    input_answer = list()
+    # test: separated
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 2, 2, 2
+    x4, y4, z4 = 3, 3, 3
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), False))
+    # test: point overlap
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 1, 1, 1
+    x4, y4, z4 = 3, 3, 3
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), False))
+    # test: edge overlap
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 1, 1, 0
+    x4, y4, z4 = 2, 2, 1
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), False))
+    # test: area overlap, single corner overlap
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 0.5, 0.5, 0.5
+    x4, y4, z4 = 2, 2, 2
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), True))
+    # test: area overlap, edge area overlap
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 0.5, 0.5, 0.5
+    x4, y4, z4 = 2, 0.8, 2
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), True))
+    # test: area overlap, all within
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 0.5, 0.5, 0.5
+    x4, y4, z4 = 0.8, 0.8, 0.8
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), True))
+
+    for input, answer in input_answer:
+        result = check_overlap_3d_ortho(*input)
+        print(input, result)
+        assert answer == result
 
 
 if __name__ == '__main__':
-    _test_fds2list_single_line()
-    _test_fds2df()
-    _test_df2fds()
+    # _test_fds2list_single_line()
+    # _test_fds2df()
+    # _test_df2fds()
+    _test_mesh_optimiser()
+    # _test_check_overlap_2d_ortho()

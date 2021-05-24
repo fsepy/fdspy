@@ -338,33 +338,33 @@ def _test_case_1():
         (5, 10),
     ]
     edges = [[j - 1 for j in i] for i in edges]
-    print(edges)
+    print('EDGES:', edges)
     weights = np.array((1, 0.8, 0.4, 0.4, 1.4, 0.8, 0.8, 0.4, 0.75, 0.75, 1.5))
-    n_groups = 11
+    n_groups = 4
 
     edge_mat = np.zeros(shape=(len(vertices), len(vertices)))
     for i, edge in enumerate(edges):
         edge_mat[i, edge] = 1
     r = validate_edges(edge_mat=edge_mat, vertices=np.array((2, 3)))
-    print(r)
+    assert (r is True)
 
     gcombs = get_gcombs_all(vertices=vertices, n_groups=n_groups, edges=edges)
     gweights = list(gcombs2gweights(gcombs=gcombs, weights=weights))
     gvars = list(gweights2gvars(gweights))
     for i, gcomb in enumerate(gcombs):
-        print(gcomb, gweights[i], gvars[i])
+        print('GCOMBS, GWEIGHTS, GVARS:', gcomb, gweights[i], f'{gvars[i]:.2f}')
 
     best_gcombs = gcombs2best_gcombs(gcombs=gcombs, weights=weights)
     for i in best_gcombs:
-        print('best', i)
+        print('BEST GCOMB:', i)
 
 
 if __name__ == '__main__':
-    _test_validate_edges()
-    _test_unique_gcombs()
-    _test_append_combinations()
-    _test_gcombs()
-    _test_gcombs_all()
-    _test_gcombs_all_performance()
-    _test_gcombs2gweights()
+    # _test_validate_edges()
+    # _test_unique_gcombs()
+    # _test_append_combinations()
+    # _test_gcombs()
+    # _test_gcombs_all()
+    # _test_gcombs_all_performance()
+    # _test_gcombs2gweights()
     _test_case_1()
