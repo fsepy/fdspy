@@ -29,11 +29,27 @@ class MESH(ABC):
 
         self.misc_kwargs = kwargs
 
+    def to_fds(self):
+        # &MESH ID='MESH04', IJK=10,4,10, XB=2.0,3.0,0.2,0.6,0.0,1.0/
+        IJK = ','.join([f'{i}' for i in [self.i, self.j, self.k]])
+        XB = ','.join([f'{i}' for i in [self.x1, self.x2, self.y1, self.y2, self.z1, self.z2]])
+
+        misc = list()
+        for k, v in self.misc_kwargs.items():
+            if k == '_GROUP':
+                continue
+            misc.append(f'{k}={v}')
+
+        if len(misc) > 0:
+            return f"&{self.misc_kwargs['_GROUP']} ID='{self.id}', IJK={IJK}, XB={XB}, {', '.join(misc)}/"
+        else:
+            return f"&{self.misc_kwargs['_GROUP']} ID='{self.id}', IJK={IJK}, XB={XB}/"
+
     def __repr__(self):
         return self.id
 
     def __lt__(self, other) -> bool:
-        return check_overlap_3d_ortho(
+        return check_contact_3d_ortho(
             self.x1, self.y1, self.z1,
             self.x2, self.y2, self.z2,
             other.x1, other.y1, other.z1,
@@ -327,34 +343,6 @@ def _test_df2fds():
     print(weights)
 
 
-def _test_mesh_optimiser():
-
-    from fdspy.tests.fds_scripts import mesh_optimiser_0
-    model = FDSBaseModel(mesh_optimiser_0)
-
-    df_fds = model.fds_df.copy()
-    print(df_fds.loc[df_fds['_GROUP'] == 'MESH'])
-
-    meshes = list()
-    for index, row in df_fds.loc[df_fds['_GROUP'] == 'MESH'].iterrows():
-        row.dropna(inplace=True)
-        line_dict = row.to_dict()
-        meshes.append(MESH(**line_dict))
-
-    print(meshes)
-
-    edges = list()
-    for i, mesh in enumerate(meshes):
-        edges.append(list())
-        for j, mesh_ in enumerate(meshes):
-            if mesh < mesh_:
-                edges[-1].append(j)
-    print(edges)
-
-    weights = [i.size_cell() for i in meshes]
-    print(weights)
-
-
 def check_overlap_2d_ortho(x1: float, x2: float, y1: float, y2: float, x3: float, x4: float, y3: float, y4: float) -> bool:
     """
     For given two rectangles defined by (x1, y1) -> (x2, y2) and (x3, y3) -> (x4, y4), find if they overlap with each
@@ -370,18 +358,28 @@ def check_overlap_2d_ortho(x1: float, x2: float, y1: float, y2: float, x3: float
     :param y4:
     :return:
     """
-    
-    x3 = (x1 < x3 < x2) or (x1 > x3 > x2)
-    x4 = (x1 < x4 < x2) or (x1 > x4 > x2)
-    y3 = (y1 < y3 < y2) or (y1 > y3 > y2)
-    y4 = (y1 < y4 < y2) or (y1 > y4 > y2)
+
+    if x1 == x3 and x2 == x4 and y1 == y3 and y2 == y4:
+        return True
+
+    x3_ = (x1 < x3 < x2) or (x1 > x3 > x2)
+    x4_ = (x1 < x4 < x2) or (x1 > x4 > x2)
+    y3_ = (y1 < y3 < y2) or (y1 > y3 > y2)
+    y4_ = (y1 < y4 < y2) or (y1 > y4 > y2)
+
+    if x1 == x3 and x2 == x4:
+        if y3_ or y4_:
+            return True
+    if y1 == y3 and y2 == y4:
+        if x3_ or x4_:
+            return True
 
     # Check if any vertices of rectangle 2 (x3, y3) -> (x4, y4) is with in rectangle 1 (x1, y1) -> (x2, y2)
-    for i in (x3, x4):
-        for j in (y3, y4):
+    for i in (x3_, x4_):
+        for j in (y3_, y4_):
             if i is True and j is True:
                 return True
-    
+
     return False
 
 
@@ -431,36 +429,63 @@ def _test_check_overlap_2d_ortho():
 
 
 def check_contact_3d_ortho(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4):
-
-    if x3 == x1
-
-
-    if x1 == x3 and y1 == y3 and z1 == z3 and x2 == x4 and y2 == y4 and z2 == z4:
+    if x1 == x3 and x2 == x4 and y1 == y3 and y2 == y4 and z1 == z3 and z2 == z4:
         return True
-
-    x3 = (x1 < x3 < x2) or (x1 > x3 > x2)
-    x4 = (x1 < x4 < x2) or (x1 > x4 > x2)
-    y3 = (y1 < y3 < y2) or (y1 > y3 > y2)
-    y4 = (y1 < y4 < y2) or (y1 > y4 > y2)
-    z3 = (z1 < z3 < z2) or (z1 > z3 > z2)
-    z4 = (z1 < z4 < z2) or (z1 > z4 > z2)
-
-    for i in (x3, x4):
-        if i is False:
-            continue
-        for j in (y3, y4):
-            if j is False:
-                continue
-            for k in (z3, z4):
-                if k is False:
-                    continue
-                else:
-                    return True
+    if x3 == x1 or x3 == x2:
+        if check_overlap_2d_ortho(x1=y1, x2=y2, y1=z1, y2=z2, x3=y3, x4=y4, y3=z3, y4=z4):
+            return True
+    if y3 == y1 or y3 == y2:
+        if check_overlap_2d_ortho(x1=x1, x2=x2, y1=z1, y2=z2, x3=x3, x4=x4, y3=z3, y4=z4):
+            return True
+    if z3 == z1 or z3 == z2:
+        if check_overlap_2d_ortho(x1=x1, x2=x2, y1=y1, y2=y2, x3=x3, x4=x4, y3=y3, y4=y4):
+            return True
 
     return False
 
-def check_overlap_3d_ortho(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4):
 
+def _test_check_contact_3d_ortho():
+    input_answer = list()
+    # test: separated
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 2, 2, 2
+    x4, y4, z4 = 3, 3, 3
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), False))
+    assert check_contact_3d_ortho(*input_answer[-1][0]) == input_answer[-1][1]
+    # test: point overlap
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 1, 1, 1
+    x4, y4, z4 = 3, 3, 3
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), False))
+    assert check_contact_3d_ortho(*input_answer[-1][0]) == input_answer[-1][1]
+    # test: edge overlap
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 1, 1, 0
+    x4, y4, z4 = 2, 2, 1
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), False))
+    assert check_contact_3d_ortho(*input_answer[-1][0]) == input_answer[-1][1]
+    # test: area overlap, part
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 1, 0, 0
+    x4, y4, z4 = 1.5, 0.5, 0.5
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), True))
+    assert check_contact_3d_ortho(*input_answer[-1][0]) == input_answer[-1][1]
+    # test: area overlap, part
+    x1, y1, z1 = 0, 0, 0
+    x2, y2, z2 = 1, 1, 1
+    x3, y3, z3 = 1, -0.5, -0.5
+    x4, y4, z4 = 2, 0.5, 0.5
+    input_answer.append(((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), True))
+    assert check_contact_3d_ortho(*input_answer[-1][0]) == input_answer[-1][1]
+    # test: area overlap, edge area overlap
+    # test: area overlap, all within
+
+
+def check_overlap_3d_ortho(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4):
     if x1 == x3 and y1 == y3 and z1 == z3 and x2 == x4 and y2 == y4 and z2 == z4:
         return True
 
@@ -482,14 +507,10 @@ def check_overlap_3d_ortho(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4):
                     continue
                 else:
                     return True
-
-
-
     return False
 
 
 def _test_check_overlap_3d_ortho():
-
     input_answer = list()
     # test: separated
     x1, y1, z1 = 0, 0, 0
@@ -534,9 +555,64 @@ def _test_check_overlap_3d_ortho():
         assert answer == result
 
 
+def _test_mesh_optimiser():
+    from fdspy.tests.fds_scripts import mesh_optimiser_0
+    model = FDSBaseModel(mesh_optimiser_0)
+
+    df_fds = model.fds_df.copy()
+    print(df_fds.loc[df_fds['_GROUP'] == 'MESH'])
+
+    meshes = list()
+    for index, row in df_fds.loc[df_fds['_GROUP'] == 'MESH'].iterrows():
+        row.dropna(inplace=True)
+        line_dict = row.to_dict()
+        meshes.append(MESH(**line_dict))
+
+    edges = list()
+    for i, mesh in enumerate(meshes):
+        edges.append(list())
+        for j, mesh_ in enumerate(meshes):
+            if mesh < mesh_ or mesh_ < mesh:
+                edges[-1].append(j)
+
+    import numpy as np
+    from fdspy.func_graph import validate_edges, get_gcombs_all, gcombs2best_gcombs
+    weights = np.array([i.size_cell() for i in meshes])
+    vertices = np.arange(len(meshes))
+    print('MESHES:      ', meshes)
+    print('VERTICES:    ', vertices)
+    print('WEIGHTS:     ', weights)
+    print('EDGES:       ', edges)
+    n_groups = 4
+
+    edge_mat = np.zeros(shape=(len(vertices), len(vertices)))
+    for i, edge in enumerate(edges):
+        edge_mat[i, edge] = 1
+    r = validate_edges(edge_mat=edge_mat, vertices=np.array((2, 3)))
+    assert (r is True)
+
+    gcombs = get_gcombs_all(vertices=vertices, n_groups=n_groups, edges=edges)
+    # gweights = list(gcombs2gweights(gcombs=gcombs, weights=weights))
+    # gvars = list(gweights2gvars(gweights))
+    # for i, gcomb in enumerate(gcombs):
+    #     print('GCOMBS, GWEIGHTS, GVARS:', gcomb, gweights[i], f'{gvars[i]:.2f}')
+
+    best_gcombs = gcombs2best_gcombs(gcombs=gcombs, weights=weights)
+    for i in best_gcombs:
+        print('BEST GCOMB:', i)
+
+    best_gcomb = best_gcombs[0]
+    for n_mpi, v in enumerate(best_gcomb):
+        for n_mesh in v:
+            mesh = meshes[n_mesh]
+            mesh.misc_kwargs.update({'MPI_PROCESS': f'{n_mpi}'})
+            print(mesh.to_fds())
+
+
 if __name__ == '__main__':
     # _test_fds2list_single_line()
     # _test_fds2df()
     # _test_df2fds()
     _test_mesh_optimiser()
+    # _test_check_contact_3d_ortho()
     # _test_check_overlap_2d_ortho()
