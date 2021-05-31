@@ -560,7 +560,7 @@ def _test_mesh_optimiser():
     model = FDSBaseModel(mesh_optimiser_0)
 
     df_fds = model.fds_df.copy()
-    print(df_fds.loc[df_fds['_GROUP'] == 'MESH'])
+    # print(df_fds.loc[df_fds['_GROUP'] == 'MESH'])
 
     meshes = list()
     for index, row in df_fds.loc[df_fds['_GROUP'] == 'MESH'].iterrows():
@@ -572,41 +572,60 @@ def _test_mesh_optimiser():
     for i, mesh in enumerate(meshes):
         edges.append(list())
         for j, mesh_ in enumerate(meshes):
-            if mesh < mesh_ or mesh_ < mesh:
-                edges[-1].append(j)
+            edges[-1].append(j)
 
     import numpy as np
-    from fdspy.func_graph import validate_edges, get_gcombs_all, gcombs2best_gcombs
+    from fdspy.func_graph import get_gcombs_all, gcombs2best_gcombs
     weights = np.array([i.size_cell() for i in meshes])
     vertices = np.arange(len(meshes))
-    print('MESHES:      ', meshes)
-    print('VERTICES:    ', vertices)
-    print('WEIGHTS:     ', weights)
-    print('EDGES:       ', edges)
     n_groups = 4
 
-    edge_mat = np.zeros(shape=(len(vertices), len(vertices)))
-    for i, edge in enumerate(edges):
-        edge_mat[i, edge] = 1
-    r = validate_edges(edge_mat=edge_mat, vertices=np.array((2, 3)))
-    assert (r is True)
-
     gcombs = get_gcombs_all(vertices=vertices, n_groups=n_groups, edges=edges)
-    # gweights = list(gcombs2gweights(gcombs=gcombs, weights=weights))
-    # gvars = list(gweights2gvars(gweights))
-    # for i, gcomb in enumerate(gcombs):
-    #     print('GCOMBS, GWEIGHTS, GVARS:', gcomb, gweights[i], f'{gvars[i]:.2f}')
+    best_gcomb = gcombs2best_gcombs(gcombs=gcombs, weights=weights)[0]
 
-    best_gcombs = gcombs2best_gcombs(gcombs=gcombs, weights=weights)
-    for i in best_gcombs:
-        print('BEST GCOMB:', i)
+    print(best_gcomb)
+    print([[weights[j] for j in i] for i in best_gcomb])
+    print([sum([weights[j] for j in i]) for i in best_gcomb])
+    print(f'VAR:        {np.var([sum([weights[j] for j in i]) for i in best_gcomb]):g}')
 
-    best_gcomb = best_gcombs[0]
-    for n_mpi, v in enumerate(best_gcomb):
-        for n_mesh in v:
-            mesh = meshes[n_mesh]
-            mesh.misc_kwargs.update({'MPI_PROCESS': f'{n_mpi}'})
-            print(mesh.to_fds())
+    # for n_mpi, v in enumerate(best_gcomb):
+    #     for n_mesh in v:
+    #         mesh = meshes[n_mesh]
+    #         mesh.misc_kwargs.update({'MPI_PROCESS': f'{n_mpi}'})
+    #         print(mesh.to_fds())
+
+
+def _test_mesh_optimiser_2():
+    from fdspy.tests.fds_scripts import mesh_optimiser_0
+    from fdspy.lib.gcomb import GroupedCombinations
+    model = FDSBaseModel(mesh_optimiser_0)
+
+    df_fds = model.fds_df.copy()
+
+    meshes = list()
+    for index, row in df_fds.loc[df_fds['_GROUP'] == 'MESH'].iterrows():
+        row.dropna(inplace=True)
+        line_dict = row.to_dict()
+        meshes.append(MESH(**line_dict))
+
+    import numpy as np
+    weights = np.array([i.size_cell() for i in meshes])
+    n_groups = 4
+
+    mesh_optimiser = GroupedCombinations(n_items=len(meshes), n_groups=n_groups, weights=weights)
+    best_gcomb = mesh_optimiser.find_best_grouped_combinations()
+    best_gcomb_indexes = mesh_optimiser.gcomb_weight2index(weights=weights, gcomb=best_gcomb)
+
+    print(best_gcomb_indexes)
+    print(best_gcomb)
+    print([sum(i) for i in best_gcomb])
+    print(f'VAR:        {np.var([sum(i) for i in best_gcomb])}')
+
+    # for n_mpi, v in enumerate(best_gcomb_indexes):
+    #     for n_mesh in v:
+    #         mesh = meshes[n_mesh]
+    #         mesh.misc_kwargs.update({'MPI_PROCESS': f'{n_mpi}'})
+    #         print(mesh.to_fds())
 
 
 if __name__ == '__main__':
@@ -614,5 +633,6 @@ if __name__ == '__main__':
     # _test_fds2df()
     # _test_df2fds()
     _test_mesh_optimiser()
+    _test_mesh_optimiser_2()
     # _test_check_contact_3d_ortho()
     # _test_check_overlap_2d_ortho()

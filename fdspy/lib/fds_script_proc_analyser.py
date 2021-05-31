@@ -319,9 +319,6 @@ def main(fds_script: str):
 
 
 if __name__ == "__main__":
+    from fdspy.tests.fds_scripts import general_room_fire
 
-    # main(EXAMPLE_FDS_SCRIPT_MALTHOUSE_FF1)
-
-    main_cli(
-        r"C:\Users\IanFu\Desktop\fdspy test\moe2.fds"
-    )
+    main(general_room_fire)

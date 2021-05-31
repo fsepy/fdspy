@@ -1,5 +1,4 @@
 import logging
-from os.path import join, dirname
 from typing import List, Tuple
 
 import numpy as np
@@ -152,14 +151,9 @@ class FDSTravellingFireMaker(FDSBaseModel):
 
 
 def __test_travelling_fire_line_1_ignition():
-    from fdspy import __root_dir__
+    from fdspy.tests.fds_scripts import travelling_fire_line_1_ignition_origin
 
-    fp_fds_raw = join(dirname(__root_dir__), 'tests', 'fds_scripts', 'travelling_fire-line-1_ignition_origin.fds')
-
-    with open(fp_fds_raw, 'r') as f:
-        fds_raw = f.read()
-
-    test = FDSTravellingFireMaker(fds_raw=fds_raw)
+    test = FDSTravellingFireMaker(fds_raw=travelling_fire_line_1_ignition_origin)
     res = test.make_travelling_fire(
         id_common_prefix=['travelling_fire'],
         ignition_origin=[(0, 0.5, 0)],
@@ -168,20 +162,13 @@ def __test_travelling_fire_line_1_ignition():
         burning_time=[10]
     )
 
-    from os.path import basename
-    with open(join(dirname(fp_fds_raw), basename(fp_fds_raw.replace('.fds', '.out.fds'))), 'w+') as f:
-        f.write(res)
+    print(res)
 
 
 def __test_travelling_fire_line_2_ignition():
-    from fdspy import __root_dir__
+    from fdspy.tests.fds_scripts import travelling_fire_line_2_ignition_origin
 
-    fp_fds_raw = join(dirname(__root_dir__), 'tests', 'fds_scripts', 'travelling_fire-line-2_ignition_origin.fds')
-
-    with open(fp_fds_raw, 'r') as f:
-        fds_raw = f.read()
-
-    test = FDSTravellingFireMaker(fds_raw=fds_raw)
+    test = FDSTravellingFireMaker(fds_raw=travelling_fire_line_2_ignition_origin)
     res = test.make_travelling_fire(
         id_common_prefix=['travelling_fire_a', 'travelling_fire_b'],
         ignition_origin=[(0, 0.5, 0), (5, 0.5, 0)],
@@ -190,36 +177,22 @@ def __test_travelling_fire_line_2_ignition():
         burning_time=[10, 10]
     )
 
-    from os.path import basename
-    with open(join(dirname(fp_fds_raw), basename(fp_fds_raw.replace('.fds', '.out.fds'))), 'w+') as f:
-        f.write(res)
+    print(res)
 
 
 def __test_travelling_fire_1cw():
-    from fdspy import __root_dir__
+    from fdspy.tests.fds_scripts import travelling_fire_1cw
 
-    fp_fds_raw = join(dirname(__root_dir__), 'tests', 'fds_scripts', 'travelling_fire-1cw.fds')
-
-    with open(fp_fds_raw, 'r') as f:
-        fds_raw = f.read()
-
-    test = FDSTravellingFireMaker(fds_raw=fds_raw)
+    test = FDSTravellingFireMaker(fds_raw=travelling_fire_1cw)
     res = test.make_travelling_fire(
         id_common_prefix=['travelling_fire_a', 'travelling_fire_b', 'travelling_fire_c'],
         ignition_origin=[(3.3, 46.7, 3.82), (24.3, 28.7, 3.82), (36.3, 27.7, 3.82)],
         ignition_delay_time=[0, 27.5, 27.5 + 12.0],
         spread_speed=[1, 1, 1],
         burning_time=[5, 5, 5]
-        # id_common_prefix=['travelling_fire',],
-        # ignition_origin=[(3.3, 46.7, 3.82),],
-        # ignition_delay_time=[0,],
-        # spread_speed=[1,],
-        # burning_time=[10,]
     )
 
-    from os.path import basename
-    with open(join(dirname(fp_fds_raw), basename(fp_fds_raw.replace('.fds', '.out.fds'))), 'w+') as f:
-        f.write(res)
+    print(res)
 
 
 if __name__ == '__main__':

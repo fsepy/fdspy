@@ -55,3 +55,7 @@ def test_fds2dict_parameterise_single_fds_command():
 
     line = r"""&TIME T_END=400.0, RESTRICT_TIME_STEP=.FALSE./"""
     assert ff(line)[3] == "RESTRICT_TIME_STEP"
+
+
+if __name__ == '__main__':
+    test_fds2dict_parameterise_single_fds_command()

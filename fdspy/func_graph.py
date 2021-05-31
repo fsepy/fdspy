@@ -292,7 +292,6 @@ def _test_gcombs_all_performance():
 
 def gcombs2gweights(gcombs, weights):
     for i, gcomb in enumerate(gcombs):
-        print(gcomb)
         yield [np.sum(weights[list(_)]) for _ in gcomb]
 
 
