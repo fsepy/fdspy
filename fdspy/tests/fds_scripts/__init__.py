@@ -16,8 +16,14 @@ with open(join(dirname(__file__), 'general-residential_corridor.fds'), 'r') as f
 with open(join(dirname(__file__), 'general-room_fire.fds'), 'r') as f:
     general_room_fire = f.read()
 
-with open(join(dirname(__file__), 'mesh_optimiser-0.fds'), 'r') as f:
+with open(join(dirname(__file__), 'mesh-0.fds'), 'r') as f:
     mesh_optimiser_0 = f.read()
+
+with open(join(dirname(__file__), 'mesh-1.fds'), 'r') as f:
+    mesh_optimiser_1 = f.read()
+
+with open(join(dirname(__file__), 'mesh-2.fds'), 'r') as f:
+    mesh_optimiser_2 = f.read()
 
 with open(join(dirname(__file__), 'travelling_fire-1cw.fds'), 'r') as f:
     travelling_fire_1cw = f.read()
