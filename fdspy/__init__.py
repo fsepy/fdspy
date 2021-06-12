@@ -7,6 +7,8 @@ __root_dir__ = path.dirname(path.realpath(__file__))
 # setup logger
 def __get_logger():
     logger_ = logging.getLogger('gui')
+    if logger_.hasHandlers():
+        return logger_
 
     c_handler = logging.StreamHandler()
     c_handler.setLevel(logging.DEBUG)

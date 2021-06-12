@@ -8,13 +8,9 @@ from fdspy import logger
 
 class FDSOutBaseModel(ABC):
     def __init__(self):
-        self.__fds_out_raw: str = None
-        self.__fds_out_raw_changed: bool = True
-
+        self.__fds_out: str = None  # output file string
+        self.__fds_out_changed: bool = True  # flag indicating whether output file has changed and unprocessed
         self.__simulation_time_stats: list = None
-
-    def read_fds_out(self, fds_out_raw: str):
-        self.fds_out_raw = fds_out_raw
 
     @staticmethod
     def __make_simulation_time_stats(fds_out_raw: str) -> tuple:
@@ -57,13 +53,13 @@ class FDSOutBaseModel(ABC):
         return time_step, simulation_time, wall_time_elapse
 
     @property
-    def fds_out_raw(self) -> str:
-        return self.__fds_out_raw
+    def fds_out(self) -> str:
+        return self.__fds_out
 
-    @fds_out_raw.setter
-    def fds_out_raw(self, fds_out_raw: str):
-        self.__fds_out_raw = fds_out_raw
-        self.__fds_out_raw_changed = True
+    @fds_out.setter
+    def fds_out(self, v: str):
+        self.__fds_out = v
+        self.__fds_out_changed = True
 
     def make_simulation_time_stats(self, fp_csv: str = None):
         """
@@ -84,13 +80,13 @@ class FDSOutBaseModel(ABC):
 
         # Make simulation time stats
         # only process data if (*.out data has changed) or (no previous simulation time stats have been made)
-        if self.__fds_out_raw_changed or self.__simulation_time_stats is None:
+        if self.__fds_out_changed or self.__simulation_time_stats is None:
             # raise error if no *.out data is defined
-            if self.fds_out_raw is None:
-                raise ValueError(f'FDS output data is undefined, {self.fds_out_raw}')
+            if self.fds_out is None:
+                raise ValueError(f'FDS output data is undefined, {self.fds_out}')
             else:
                 # process *.out data and make simulation time stats
-                time_step, simulation_time, wall_time_elapse = self.__make_simulation_time_stats(self.fds_out_raw)
+                time_step, simulation_time, wall_time_elapse = self.__make_simulation_time_stats(self.fds_out)
                 self.__simulation_time_stats = dict(
                     time_step=time_step,
                     simulation_time=simulation_time,
@@ -114,38 +110,27 @@ class FDSOutBaseModel(ABC):
         return self.__simulation_time_stats
 
 
-def _test_make_simulation_time_stats():
-    """
-    Test function for `FDSOutBaseModel.make_simulation_time_stats`
-    """
-    from fdspy.tests.fds_out import general_benchmark_1
+class Test_FDSOutBaseModel(FDSOutBaseModel):
+    def __init__(self):
+        super().__init__()
+        self.test_make_simulation_time_stats()
 
-    model = FDSOutBaseModel()  # instantiate class
-    model.read_fds_out(general_benchmark_1)  # assign *.out data
-    stats = model.make_simulation_time_stats()  # make simulation time stats
+    def test_make_simulation_time_stats(self):
+        """
+        Test function for `FDSOutBaseModel.make_simulation_time_stats`
+        """
+        from fdspy.tests.fds_out import general_benchmark_1
 
-    # check `FDSOutBaseModel.make_simulation_time_stats` returns the expected dict
-    assert all([i in stats for i in ['time_step', 'simulation_time', 'wall_time_elapse']])
+        self.fds_out = general_benchmark_1
+        stats = self.make_simulation_time_stats()  # make simulation time stats
+        print(stats)
 
-    # check no. of time records, should be 29
-    assert all([len(stats[i]) == 29 for i in ['time_step', 'simulation_time', 'wall_time_elapse']])
+        # check `FDSOutBaseModel.make_simulation_time_stats` returns the expected dict
+        assert all([i in stats for i in ['time_step', 'simulation_time', 'wall_time_elapse']])
+
+        # check no. of time records, should be 29
+        assert all([len(stats[i]) == 29 for i in ['time_step', 'simulation_time', 'wall_time_elapse']])
 
 
 if __name__ == '__main__':
-
-    _test_make_simulation_time_stats()
-
-    import os.path as path
-
-    fp_out = path.realpath(r'C:\Users\IanFu\Desktop\CLT-S9-P0_MLR_3.out')
-
-    with open(fp_out, 'r') as f:
-        fds_out_raw_ = f.read()
-
-    from fdspy.tests.fds_out import general_benchmark_1
-
-    model = FDSOutBaseModel()
-    model.read_fds_out(fds_out_raw_)
-
-    fp_csv = join(dirname(fp_out), 'test_out_simulation_time.csv')
-    model.make_simulation_time_stats(fp_csv=fp_csv)
+    Test_FDSOutBaseModel()

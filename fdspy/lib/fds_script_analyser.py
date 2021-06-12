@@ -1,14 +1,108 @@
 import collections
 import copy
-import logging
 
 import numpy as np
 import pandas as pd
+from fsetools import logger
 
 from fdspy.lib.asciiplot import AsciiPlot
-from fdspy.lib.fds_base_model import FDSBaseModel
+from fdspy.lib.fds_script_core import FDSBaseModel
 
-logger = logging.getLogger('cli')
+
+class FDSAnalyserBase:
+    @staticmethod
+    def general(df_fds: pd.DataFrame) -> dict:
+        dict_stats = dict()  # to collect results statistics
+        dict_stats["Command count"] = len(df_fds)
+        dict_stats["Simulation duration"] = df_fds["T_END"].dropna().values[0]
+
+        # work out number of mpi processes
+        try:
+            dict_stats['MPI process'] = len(set(df_fds['MPI_PROCESS'].dropna().values))
+        except KeyError:
+            dict_stats['MPI process'] = 1
+
+        return dict_stats
+
+    @staticmethod
+    def mesh(df_fds: pd.DataFrame, d_star: float) -> dict:
+        d = collections.OrderedDict()  # to collect results statistics
+
+        df_fds_mesh = df_fds[df_fds["_GROUP"] == "MESH"]
+        df_fds_mesh = df_fds_mesh.dropna(axis=1, inplace=False)
+
+        cell_count_i, cell_size_i, volume_i = list(), list(), list()
+        for i, v in df_fds_mesh.iterrows():
+            v = v.to_dict()
+            ii, jj, kk = [float(j) for j in v["IJK"].split(",")]
+            x1, x2, y1, y2, z1, z2 = [float(j) for j in v["XB"].split(",")]
+
+            cell_count_i.append(ii * jj * kk)
+            cell_size_i.append([abs(x2 - x1) / ii, abs(y2 - y1) / jj, abs(z2 - z1) / kk])
+            volume_i.append(abs(x1 - x2) * abs(y1 - y2) * abs(z1 - z2))
+
+        d["Mesh count"] = "{:d}".format(len(cell_count_i))
+        d["Cell count"] = "{:,d} k".format(int(np.sum(cell_count_i) / 1000))
+        d["Average cell size"] = '{:.0f} mm'.format(((np.sum(volume_i) / np.sum(cell_count_i)) ** (1 / 3)) * 1000)
+
+        for i, cell_count in enumerate(cell_count_i):
+            cell_size = cell_size_i[i]
+            d[f"Mesh {i:d} cell size"] = ', '.join([f'{j:.3f}'.strip('0').strip('.') for j in cell_size])
+            d[f"Mesh {i:d} D*/dx (max., min.)"] = f'{d_star / np.max(cell_size):.3f}, {d_star / np.min(cell_size):.3f}'
+
+        return d
+
+    @staticmethod
+    def slcf(df_fds: pd.DataFrame) -> dict:
+        dict_stats = dict()  # to collect results statistics
+
+        df_fds_slcf = df_fds.copy()
+        df_fds_slcf = df_fds_slcf[df_fds_slcf["_GROUP"] == "SLCF"]
+
+        # SLCF counts
+        # ===========
+        dict_stats["slice count"] = len(df_fds_slcf[df_fds_slcf["_GROUP"] == "SLCF"])
+
+        list_quantity = df_fds_slcf["QUANTITY"].values
+        for i in sorted(list(set(list_quantity))):
+            dict_stats[f"SLCF {i} count"] = sum(df_fds_slcf["QUANTITY"] == i)
+
+        # PBX, PBY, PBZ summary
+        # =====================
+        for i in ["PBX", "PBY", "PBZ"]:
+            if i in df_fds_slcf.columns:
+                df2 = df_fds_slcf[i].dropna()
+                dict_stats[f"{i} locations"] = ", ".join(sorted(list(set(df2.values))))
+            else:
+                # d[f"{i} locations"] = "None"
+                pass
+
+        return dict_stats
+
+    @staticmethod
+    def burner(df_fds: pd.DataFrame, figsize=(80, 20)):
+        dict_stats = dict()
+        # ================
+        # Find all burners
+        # ================
+        df_fds_hrrpua = df_fds[df_fds["_GROUP"] == "SURF"]
+        df_fds_hrrpua = df_fds_hrrpua[df_fds_hrrpua["HRRPUA"].notnull()]
+        df_fds_hrrpua.dropna(axis=1, inplace=True)
+
+        # =====================================
+        # Generate time and HRR for all burners
+        # =====================================
+        # e.g. list_burner_hrr = [(id1, t1, hrr1), (id2, t2, hrr2), ...]
+        list_burner_hrr = list()
+
+        # ===================
+        # Make time-HRR plots
+        # ===================
+        aplot = AsciiPlot(size=figsize)
+        for i, (id, t, hrr) in enumerate(list_burner_hrr):
+            dict_stats[f'Fire {i}-{id}'] = aplot.plot(t, hrr).str() + '\n'
+
+        return dict_stats
 
 
 class FDSAnalyser(FDSBaseModel):
