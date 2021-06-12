@@ -1,6 +1,6 @@
 import numpy as np
 
-from fdspy.lib.fds_base_model import FDSBaseModel, MESH
+from fdspy.lib.fds_script_core import FDSBaseModel, MESH
 
 
 class FDSOptimiser(FDSBaseModel):
@@ -80,9 +80,9 @@ def _test_mesh_optimiser():
 
 
 def _test_mesh_optimiser_2():
-    from fdspy.tests.fds_scripts import mesh_optimiser_0
+    from fdspy.tests.fds_scripts import mesh_optimiser_2 as mesh_optimiser
     from fdspy.lib.gcomb import GroupedCombinations
-    model = FDSBaseModel(mesh_optimiser_0)
+    model = FDSBaseModel(mesh_optimiser)
 
     df_fds = model.fds_df.copy()
 
@@ -94,7 +94,7 @@ def _test_mesh_optimiser_2():
 
     import numpy as np
     weights = np.array([i.size_cell() for i in meshes])
-    n_groups = 4
+    n_groups = 12
 
     mesh_optimiser = GroupedCombinations(n_items=len(meshes), n_groups=n_groups, weights=weights)
     best_gcomb = mesh_optimiser.find_best_grouped_combinations()
@@ -105,12 +105,12 @@ def _test_mesh_optimiser_2():
     print([sum(i) for i in best_gcomb])
     print(f'VAR:        {np.var([sum(i) for i in best_gcomb])}')
 
-    # for n_mpi, v in enumerate(best_gcomb_indexes):
-    #     for n_mesh in v:
-    #         mesh = meshes[n_mesh]
-    #         mesh.misc_kwargs.update({'MPI_PROCESS': f'{n_mpi}'})
-    #         print(mesh.to_fds())
+    for n_mpi, v in enumerate(best_gcomb_indexes):
+        for n_mesh in v:
+            mesh = meshes[n_mesh]
+            mesh.misc_kwargs.update({'MPI_PROCESS': f'{n_mpi}'})
+            print(mesh.to_fds())
 
 
 if __name__ == '__main__':
-    pass
+    _test_mesh_optimiser_2()

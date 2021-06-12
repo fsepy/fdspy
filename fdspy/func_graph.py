@@ -1,10 +1,11 @@
 from itertools import combinations
 from typing import Union
+from tqdm import tqdm
 
 import numpy as np
 
 
-def groups(vertices, n_groups: int = 1) -> list:
+def groups(vertices, n_groups: int = 1, lim_per_group: tuple = None) -> list:
     try:
         assert len(vertices) >= n_groups
     except AssertionError:
@@ -12,24 +13,43 @@ def groups(vertices, n_groups: int = 1) -> list:
             f'Number of vertices ({len(vertices)}) should be greater or equal to number of groups ({n_groups})')
 
     # work out how many possible arrangements there are
-    group_arrangements = [[1, ] * (n_groups - 1) + [len(vertices) - n_groups + 1]]
+    gas_all = list()
+    for i in range(1, int(len(vertices) / n_groups) + 1, 1):
+        if len(vertices) < i * (n_groups - 1):
+            break
+        gas = [[i, ] * (n_groups - 1) + [len(vertices) - i * (n_groups - 1)], ]
+        gas = slider(gas)
+        gas_all.extend(gas)
+
+    group_arrangements = gas_all
+
+    if lim_per_group is not None:
+        less_max = list()
+        for i, ga in enumerate(group_arrangements):
+            if lim_per_group[0] <= min(ga) and max(ga) <= lim_per_group[1]:
+                less_max.append(i)
+        group_arrangements = [group_arrangements[i] for i in less_max]
+
+    group_arrangements = [sorted(i)[::-1] for i in group_arrangements]
+
+    return group_arrangements
+
+
+def slider(initial):
     while True:
-        a = list(group_arrangements[-1])
+        a = list(initial[-1])
         is_changed = False
 
         for i in range(len(a) - 1, 0, -1):
             if a[i] - a[i - 1] > 1:
                 a[i - 1] += 1
                 a[i] -= 1
-                group_arrangements.append(a)
+                initial.append(a)
                 is_changed = True
                 break
 
         if is_changed is False: break
-
-    group_arrangements = [sorted(i)[::-1] for i in group_arrangements]
-
-    return group_arrangements
+    return initial
 
 
 def flatten_tuples(list_of_lists: tuple):
@@ -247,18 +267,21 @@ def _test_gcombs():
     print(a)
 
 
-def get_gcombs_all(vertices: Union[np.ndarray, list, tuple], n_groups: int, edges: Union[tuple, list]):
+def get_gcombs_all(vertices: Union[np.ndarray, list, tuple], n_groups: int, edges: Union[tuple, list],
+                   lim_per_group: tuple = None, is_print: bool = False):
     assert len(vertices) >= n_groups
     assert len(vertices) == len(edges)
 
-    gas = groups(vertices=vertices, n_groups=n_groups)
+    gas = groups(vertices=vertices, n_groups=n_groups, lim_per_group=lim_per_group)
 
     edge_mat = np.zeros(shape=(len(vertices), len(vertices)))
     for i, edge in enumerate(edges):
         edge_mat[i, edge] = 1
 
     combs = list()
-    for ga in gas:
+    for ga in tqdm(gas):
+        if is_print:
+            print(ga)
         comb = get_gcombs(vertices=vertices, group_arrangement=ga, edge_mat=edge_mat)
         comb = unique_gcombs(comb)
         combs.extend(comb)
