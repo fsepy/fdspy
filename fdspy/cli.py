@@ -57,16 +57,11 @@ import copy
 import os
 import subprocess
 
-import pandas as pd
-import plotly
-import plotly.graph_objects as go
 from docopt import docopt
 
 from fdspy import logger
 from fdspy.lib.fds_out_analyser import FDSOutBaseModel
 from fdspy.lib.fds_script_analyser import FDSAnalyser
-from fdspy.lib.fds_script_proc_analyser import fds_analyser_hrr
-from fdspy.lib.fds_script_proc_decoder import fds2df
 
 filepath_fds_source_template = '/home/installs/FDS{}/bin/fds'
 
@@ -133,41 +128,6 @@ def sbatch(
     logger.info(f'A job has been submitted: sbatch {filename_sh}')
 
 
-def post(filepath_fds: str):
-    # get expected *_hrr.csv file name
-    with open(filepath_fds, 'r') as f:
-        df = fds2df(f.read())
-    chid = df['CHID'].dropna().values[0].replace('"', '').replace("'", '')
-    filepath_hrr_csv = os.path.join(os.path.dirname(filepath_fds), f'{chid}_hrr.csv')
-
-    # get time and temperature array from output .csv
-    df_hrr_csv = pd.read_csv(filepath_hrr_csv, skiprows=1, index_col=False)
-    time_csv = df_hrr_csv['Time'].values
-    hrr_csv = df_hrr_csv['HRR'].values
-
-    # get time and temperature array from input .fds
-    dict_fds_hrr = fds_analyser_hrr(df)
-    time_fds = dict_fds_hrr['time_array']
-    hrr_fds = dict_fds_hrr['hrr_array']
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time_fds, y=hrr_fds, mode='lines', name='FDS input'))
-    fig.add_trace(go.Scatter(x=time_csv, y=hrr_csv, mode='lines', name='FDS output'))
-    fig.update_layout(xaxis_title='Time [second]', yaxis_title='HRR [kW]', title=None)
-    plotly.io.write_html(
-        fig,
-        file=f'{filepath_fds}.hrr.html',
-        auto_open=False,
-        config={
-            "scrollZoom": False,
-            "displayModeBar": True,
-            "editable": True,
-            "showLink": False,
-            "displaylogo": False,
-        },
-    )
-
-
 def helper_get_list_filepath_end_width(cwd: str, end_with: str) -> list:
     filepath_all = list()
     for (dirpath, dirnames, filenames) in os.walk(cwd):
@@ -200,7 +160,7 @@ def main():
             with open(file_name, 'r') as f:
                 analyser = FDSAnalyser(fds_raw=f.read())
         except Exception as e:
-            logger.error(f'Failed to instantiate FDSAnalyser, {e}')
+            logger.warning(f'Failed to instantiate FDSAnalyser, {e}')
             analyser = None
 
     if arguments["stats"] or arguments["pre"] or arguments['sbatch']:
@@ -210,7 +170,7 @@ def main():
                 f.write(stats_string)
             logger.info('Successfully generated FDS script statistics' + '\n' + stats_string)
         except Exception as e:
-            logger.error(f'Failed to generate FDS script statistics, {e}')
+            logger.warning(f'Failed to generate FDS script statistics, {e}')
 
     if arguments["sbatch"]:
         try:
@@ -237,10 +197,10 @@ def main():
             )
             logger.info('Successfully produced and executed sbatch')
         except Exception as e:
-            logger.error(f'Failed to execute sbatch, {e}')
+            logger.warning(f'Failed to execute sbatch, {e}')
 
     if arguments["post"]:
-        post(file_name)
+        logger.warning('post is temporarily removed')
 
     if arguments["out"]:
         model = FDSOutBaseModel()

@@ -7,7 +7,6 @@ import collections
 import os
 
 import numpy as np
-import plotly.express as pex
 
 from fdspy.lib.fds_script_proc_decoder import *
 
@@ -91,7 +90,6 @@ def fds_analyser(df: pd.DataFrame):
         std_out_str.append("HRR STATISTICS\n")
         std_out_str.append("-" * 40 + "\n")
         _ = fds_analyser_hrr(df)
-        fig_hrr = fds_analyser_hrr_fig(_)
         _.pop('time_array')
         _.pop('hrr_array')
         std_out_str.append("\n".join([sf_1_1(i, v) for i, v in _.items()]) + "\n")
@@ -278,19 +276,6 @@ def fds_analyser_hrr(df: pd.DataFrame):
         'peak HRR time': np.min(time_array[np.argmax(hrr_array)]),
         'D*': (np.max(hrr_array)/(1.204*1.005*293*9.81)) ** (2/5)
     }
-
-
-def fds_analyser_hrr_fig(data_dict: dict):
-
-    fig = pex.line(
-        x=data_dict['time_array'],
-        y=data_dict['hrr_array'],
-        labels=dict(x="Time [s]", y="HRR [kW]"),
-        height=None,
-        width=800,
-    )
-
-    return fig
 
 
 def main_cli(filepath_fds: str):

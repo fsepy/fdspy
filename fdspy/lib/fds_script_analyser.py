@@ -3,8 +3,8 @@ import copy
 
 import numpy as np
 import pandas as pd
-from fdspy import logger
 
+from fdspy import logger
 from fdspy.lib.asciiplot import AsciiPlot
 from fdspy.lib.fds_script_core import FDSBaseModel
 
@@ -114,10 +114,20 @@ class FDSAnalyser(FDSBaseModel):
         self.__hrr_d_star = None
         self.__print_width = None
 
-        self.hrr_x, self.hrr_y, self.hrr_d_star = self._heat_release_rate(self.fds_df)
+        try:
+            self.hrr_x, self.hrr_y, self.hrr_d_star = self._heat_release_rate(self.fds_df)
+        except Exception as e:
+            logger.debug(f'Failed to parse heat release rate, {e}')
+
         self.print_width = print_width
 
     def hrr_plot(self, size: tuple = (80, 20)):
+        try:
+            return self.__hrr_plot(size=size)
+        except Exception as e:
+            return str(e)
+
+    def __hrr_plot(self, size: tuple = (80, 20)) -> str:
 
         if len(self.hrr_x) == 0:
             logger.info('No fire detected (currently unable to analyse MLR fire)')
@@ -138,6 +148,12 @@ class FDSAnalyser(FDSBaseModel):
         return '\n'.join([s_start, s_content, s_end]) + '\n'
 
     def general(self) -> str:
+        try:
+            return self.__general()
+        except Exception as e:
+            return str(e)
+
+    def __general(self) -> str:
         df = self.fds_df
         d = collections.OrderedDict()  # to collect results statistics
         d["Command count"] = len(df)
@@ -160,6 +176,12 @@ class FDSAnalyser(FDSBaseModel):
         return '\n'.join([s_start, s_content, s_end]) + '\n'
 
     def mesh(self) -> str:
+        try:
+            return self.__mesh()
+        except Exception as e:
+            return str(e)
+
+    def __mesh(self) -> str:
         d = collections.OrderedDict()  # to collect results statistics
         df = self.fds_df
 
@@ -202,6 +224,12 @@ class FDSAnalyser(FDSBaseModel):
         return '\n'.join([s_start, s_content, s_end]) + '\n'
 
     def slcf(self) -> str:
+        try:
+            return self.__slcf()
+        except Exception as e:
+            return str(e)
+
+    def __slcf(self) -> str:
         d = collections.OrderedDict()  # to collect results statistics
         df = self.fds_df
 
@@ -375,17 +403,31 @@ def _test_FDSAnalyser():
     from os import path
     import fdspy
 
-    fp_fds = path.join(fdspy.__root_dir__, 'tests', 'fds_scripts', 'general-residential_corridor.fds')
+    fp_fds_list = [
+        'general-benchmark_1.fds', 'general-error.fds', 'general-residential_corridor.fds', 'general-room_fire.fds',
+        'mesh-0.fds', 'mesh-1.fds', 'mesh-2.fds', 'mesh_16_1m.fds', 'travelling_fire-1cw.fds',
+        'travelling_fire-line-1_ignition_origin.fds',
+    ]
+    for fp_fds in fp_fds_list:
+        print(fp_fds)
 
-    with open(fp_fds, 'r') as f:
-        fds_raw = f.read()
+        fp_fds = path.join(fdspy.__root_dir__, 'tests', 'fds_scripts', fp_fds)
 
-    model = FDSAnalyser(fds_raw)
+        with open(fp_fds, 'r') as f:
+            fds_raw = f.read()
 
-    print(model.hrr_plot(size=(80, 10)))
-    print(model.general())
-    print(model.mesh())
-    print(model.slcf())
+        model = FDSAnalyser(fds_raw)
+
+        model.hrr_plot(size=(80, 10))
+        model.general()
+        model.mesh()
+        model.slcf()
+        df = copy.copy(model.fds_df)
+        try:
+            n_mpi = len(set(df['MPI_PROCESS'].dropna().values))
+        except:
+            n_mpi = '-1'
+        print(n_mpi)
 
 
 if __name__ == '__main__':
