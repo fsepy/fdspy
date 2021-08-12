@@ -3,7 +3,7 @@ import copy
 
 import numpy as np
 import pandas as pd
-from fsetools import logger
+from fdspy import logger
 
 from fdspy.lib.asciiplot import AsciiPlot
 from fdspy.lib.fds_script_core import FDSBaseModel
