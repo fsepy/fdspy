@@ -178,7 +178,7 @@ def main():
                 df = copy.copy(analyser.fds_df)
                 n_mpi = len(set(df['MPI_PROCESS'].dropna().values))
             except Exception as e:
-                logger.info(f'Failed to parse MPI_PROCESS from FDSAnalyser, n_mpi set to 1, {e}')
+                logger.warning(f'Failed to parse MPI_PROCESS from FDSAnalyser, n_mpi set to 1, {e}')
                 n_mpi = 1
 
             n_omp = arguments['-o'] if arguments['-o'] else 1

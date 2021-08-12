@@ -418,7 +418,7 @@ def _test_FDSAnalyser():
 
         model = FDSAnalyser(fds_raw)
 
-        model.hrr_plot(size=(80, 10))
+        logger.info(model.hrr_plot(size=(80, 10)))
         model.general()
         model.mesh()
         model.slcf()

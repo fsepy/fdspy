@@ -12,7 +12,6 @@ sh_template = '\n'.join([
     '#SBATCH --mail-type {mail_type}',
     '#SBATCH --mail-user {mail_user}',
     '',
-    'source {fds_source}',
     'export OMP_NUM_THREADS={n_omp}',
     'export FI_PROVIDER=tcp',
     'export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so',
@@ -44,7 +43,7 @@ def make_sh(
     sh = sh_template.format(
         name=job_name,
         n_mpi=n_mpi,
-        fds_source=filepath_fds_source,
+        filepath_fds_source=filepath_fds_source,
         n_omp=n_omp,
         filename_fds=filename_fds,
         mail_type=mail_type,
