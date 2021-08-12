@@ -14,8 +14,10 @@ sh_template = '\n'.join([
     '',
     'source {fds_source}',
     'export OMP_NUM_THREADS={n_omp}',
+    'export FI_PROVIDER=tcp',
+    'export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so',
     '',
-    'mpiexec -genv FI_PROVIDER=tcp -bootstrap slurm -np $SLURM_NTASKS fds {filename_fds}',
+    'srun -n $SLURM_NTASKS {filepath_fds_source} {filename_fds}',
 ])
 
 

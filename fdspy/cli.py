@@ -68,7 +68,7 @@ from fdspy.lib.fds_script_analyser import FDSAnalyser
 from fdspy.lib.fds_script_proc_analyser import fds_analyser_hrr
 from fdspy.lib.fds_script_proc_decoder import fds2df
 
-filepath_fds_source_template = '/home/installs/FDS{}/bin/FDS6VARS.sh'
+filepath_fds_source_template = '/home/installs/FDS{}/bin/fds'
 
 
 def stats2(analyser: FDSAnalyser):
