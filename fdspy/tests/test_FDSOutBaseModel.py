@@ -1,3 +1,0 @@
-from fdspy.lib.fds_out_analyser import _test_make_simulation_time_stats as test_make_simulation_time_stats
-
-test_make_simulation_time_stats()

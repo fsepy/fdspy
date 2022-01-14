@@ -81,10 +81,6 @@ def stats2(analyser: FDSAnalyser):
         stats_str += analyser.slcf()
     except Exception as e:
         logger.error(f'Failed to generate statistics `slcf`, {e}')
-    try:
-        stats_str += analyser.hrr_plot()
-    except Exception as e:
-        logger.error(f'Failed to generate statistics `hrr_plot`, {e}')
 
     if len(stats_str) == 0:
         raise ValueError('len(stats_str)==0 no statistics produced')
