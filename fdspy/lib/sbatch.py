@@ -1,4 +1,4 @@
-import os
+from os.path import basename
 
 sh_template = '\n'.join([
     '#!/bin/sh',
@@ -34,10 +34,10 @@ def make_sh(
         fds_script = f.read()
 
     # work out fds file name
-    filename_fds = os.path.basename(filepath_fds)
+    filename_fds = basename(filepath_fds)
 
     # work out job name
-    job_name = os.path.basename(filepath_fds).replace('.fds', '')
+    job_name = basename(filepath_fds).replace('.fds', '')
 
     # make sh file
     sh = sh_template.format(
@@ -52,15 +52,3 @@ def make_sh(
 
     return sh
 
-
-def test_make_sh():
-    filepath_fds = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    filepath_fds = os.path.join(filepath_fds, 'tests_fds', 'residential_corridor.fds')
-
-    sh = make_sh(filepath_fds=filepath_fds)
-
-    print(sh)
-
-
-if __name__ == '__main__':
-    test_make_sh()

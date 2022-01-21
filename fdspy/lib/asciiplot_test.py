@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .asciiplot import *
+from asciiplot import *
 
 
 def test_asciiplot():
@@ -17,3 +17,7 @@ def test_asciiplot():
         xlim=xlim,
         ylim=ylim,
     ).show()
+
+
+if __name__ == '__main__':
+    test_asciiplot()
