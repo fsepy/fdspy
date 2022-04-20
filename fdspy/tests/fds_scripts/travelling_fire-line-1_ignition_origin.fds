@@ -1,0 +1,49 @@
+&HEAD CHID='travelling_fire-line-1_ignition_origin'/
+&TIME T_END=50.0, RESTRICT_TIME_STEP=.FALSE./
+&DUMP RENDER_FILE='trial_00.ge1', COLUMN_DUMP_LIMIT=.TRUE., DT_DEVC=0.5, DT_SL3D=0.25/
+
+&MESH ID='MESH', IJK=110,20,30, XB=-0.5,10.5,-0.5,1.5,-0.5,2.5/
+
+&REAC ID='POLYURETHANE',
+      FYI='NFPA Babrauskas',
+      FUEL='REAC_FUEL',
+      C=6.3,
+      H=7.1,
+      O=2.1,
+      N=1.0,
+      SOOT_YIELD=0.1,
+      RADIATIVE_FRACTION=0.35/
+
+&MATL ID='CONCRETE',
+      FYI='NBSIR 88-3752 - ATF NIST Multi-Floor Validation',
+      SPECIFIC_HEAT=1.04,
+      CONDUCTIVITY=1.8,
+      DENSITY=2280.0/
+
+&SURF ID='CONCRETE',
+      COLOR='GRAY 80',
+      BACKING='VOID',
+      MATL_ID(1,1)='CONCRETE',
+      MATL_MASS_FRACTION(1,1)=1.0,
+      THICKNESS(1)=0.1/
+&SURF ID='MLR_FIRE',
+      COLOR='RED',
+      MLRPUA=0.019084,
+      ADIABATIC=.TRUE./
+
+&OBST ID='Obstruction', XB=-2.775558E-17,10.0,-2.775558E-17,1.0,-0.2,-2.775558E-17, SURF_ID='CONCRETE'/ 
+
+&VENT ID='travelling_fire01', SURF_ID='MLR_FIRE', XB=0.0,1.0,0.0,1.0,0.0,0.0/
+&VENT ID='travelling_fire02', SURF_ID='MLR_FIRE', XB=1.0,2.0,0.0,1.0,0.0,0.0/
+&VENT ID='travelling_fire03', SURF_ID='MLR_FIRE', XB=2.0,3.0,0.0,1.0,0.0,0.0/
+&VENT ID='travelling_fire04', SURF_ID='MLR_FIRE', XB=3.0,4.0,0.0,1.0,0.0,0.0/
+&VENT ID='travelling_fire05', SURF_ID='MLR_FIRE', XB=4.0,5.0,0.0,1.0,0.0,0.0/
+&VENT ID='travelling_fire06', SURF_ID='MLR_FIRE', XB=5.0,6.0,0.0,1.0,0.0,0.0/
+&VENT ID='travelling_fire07', SURF_ID='MLR_FIRE', XB=6.0,7.0,0.0,1.0,0.0,0.0/
+&VENT ID='travelling_fire08', SURF_ID='MLR_FIRE', XB=7.0,8.0,0.0,1.0,0.0,0.0/
+&VENT ID='travelling_fire09', SURF_ID='MLR_FIRE', XB=8.0,9.0,0.0,1.0,0.0,0.0/
+&VENT ID='travelling_fire10', SURF_ID='MLR_FIRE', XB=9.0,10.0,0.0,1.0,0.0,0.0/
+
+&VENT ID='Mesh [ZMAX]', SURF_ID='OPEN', XB=-0.5,10.5,-0.5,1.5,2.5,2.5/
+
+&TAIL /

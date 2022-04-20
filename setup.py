@@ -3,11 +3,11 @@
 # from distutils.core import setup
 
 import os
-import setuptools
-import fdspy
-
 from codecs import open  # To use a consistent encoding
 
+import setuptools
+
+import fdspy
 
 with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "README.md")) as f:
     long_description = f.read()
@@ -43,11 +43,7 @@ setuptools.setup(
     packages=[
         "fdspy",
         "fdspy.calc_mtr",
-        "fdspy.calc_sprinkler",
-        "fdspy.fdsback",
-        "fdspy.fdsfront",
         "fdspy.gen_devc",
-        "fdspy.fdsbginfo",
         "fdspy.lib",
     ],
     install_requires=requirements,

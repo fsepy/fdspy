@@ -1,11 +1,11 @@
 # Release
 
-Checklist before releasing:
+**Checklist before releasing**:
 
 - Run tests in `tests` directory.
 - Version is up to date in `fdspy.__init__:__version__`.
 
-Release indicators:
+**Release indicators**:
 
 - New: to indicate a new feature being implemented.
 - Improved: to indicate added/improved functionality of an existing feature.
@@ -14,15 +14,13 @@ Release indicators:
 
 ## Known issues
 
-- Nothing yet.
-- MESH statistics to show mesh cell size for each mesh.
-- d* calculation.
+- To implement VENT statistics.
 
 ## Version history
 
 ### 11/11/2019 VERSION 0.0.20:
 
-- Improved: `fdspy.lib.fds_script_proc_analyser:fds_analyser_mesh` added D*/dx calculation for individual mesh.
+- Improved: `fdspy.lib.fds_script_proc_analyser:fds_analyser_mesh` added D\*/dx calculation for individual mesh.
 - Fixed: `fdspy.lib.fds_script_proc_analyser:fds_analyser_mesh` fixed mesh size calculation.
 
 ### 09/11/2019 VERSION 0.0.19: 

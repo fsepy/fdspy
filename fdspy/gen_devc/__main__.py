@@ -1,5 +1,52 @@
-from fdspy.lib.func import generate_devc, generate_xyz
-from tkinter import filedialog
+import itertools
+import os
+from tkinter import Tk, filedialog, StringVar
+
+
+def generate_xyz(*list_elements):
+    xyz = itertools.product(*list_elements)
+    xyz = list(xyz)
+
+    return xyz
+
+
+def generate_devc(id_prefix, quantity, xyz, is_return_list=False):
+    id_fmt = "{quantity}_{index:d}"
+    xyz_fmt = "{:.3f},{:.3f},{:.3f}"
+    str_fmt = "&DEVC ID='{id}', QUANTITY='{quantity}', XYZ={xyz}/"
+
+    list_cmd = []
+    for i, v in enumerate(xyz):
+        xyz_str = xyz_fmt.format(*v)
+
+        id_str = id_fmt.format(quantity=id_prefix, index=i)
+
+        list_cmd.append(str_fmt.format(id=id_str, quantity=quantity, xyz=xyz_str))
+
+    if is_return_list:
+        return list_cmd
+    else:
+        return "\n".join(list_cmd)
+
+
+def open_files_tk(title="Select Input Files", filetypes=[("csv", [".csv"])]):
+    root = Tk()
+    root.withdraw()
+    folder_path = StringVar()
+
+    list_paths_raw = filedialog.askopenfiles(title=title, filetypes=filetypes)
+    folder_path.set(list_paths_raw)
+    root.update()
+
+    list_paths = []
+    try:
+        for path_input_file in list_paths_raw:
+            list_paths.append(os.path.realpath(path_input_file.name))
+    except AttributeError:
+        return []
+
+    return list_paths
+
 
 if __name__ == "__main__":
     import numpy as np

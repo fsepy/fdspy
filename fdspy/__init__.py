@@ -1,3 +1,27 @@
+from os import path
+import logging
+
+__root_dir__ = path.dirname(path.realpath(__file__))
+
+
+# setup logger
+def __get_logger():
+    logger_ = logging.getLogger('gui')
+    if logger_.hasHandlers():
+        return logger_
+
+    c_handler = logging.StreamHandler()
+    c_handler.setLevel(logging.DEBUG)
+    c_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s'))
+    logger_.addHandler(c_handler)
+
+    logger_.setLevel(logging.INFO)
+
+    return logger_
+
+
+logger = __get_logger()
+
 """
 VERSION IDENTIFICATION RULES DOCUMENTED IN PEP 440 ARE FOLLOWED.
 
@@ -34,37 +58,7 @@ Public version identifiers are separated into up to five segments:
 
 """
 
-__version__ = "0.0.20"
-
-
-def check_pip_upgrade():
-
-    # Parse the latest version string
-    import subprocess
-    from subprocess import STDOUT, check_output
-
-    try:
-        output = check_output("pip search --version fdspy", stderr=STDOUT, timeout=5)
-    except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
-        return
-
-    # extract the version number string
-    import re
-
-    v = re.findall(r"fdspy[\s]*\([\d.]+\)", str(output))[0]
-    v = re.findall(r"[\d.]+", str(v))[0]
-
-    # check if upgrade required
-    from packaging import version
-
-    is_new_version_available = version.parse(v) > version.parse(__version__)
-
-    # raise message if upgrade is needed
-    if is_new_version_available:
-        print(
-            "New fdspy version is available, use `pip install sfeprapy --upgrade` to install the latest version."
-        )
-        print(f"Current: {__version__}\nLatest: {v}\n\n")
+__version__ = "0.0.2"
 
 
 if __name__ == "__main__":
@@ -80,5 +74,3 @@ if __name__ == "__main__":
         )
 
     assert is_canonical(__version__)
-
-    check_pip_upgrade()
