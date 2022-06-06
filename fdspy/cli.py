@@ -22,7 +22,7 @@ def sbatch(
         filepath_fds_source = fds_v
 
     # make sh file
-    from fdspy.lib.sbatch import make_sh
+    from fdspy.sbatch import make_sh
     sh = make_sh(
         filepath_fds=filepath_fds,
         filepath_fds_source=filepath_fds_source,
@@ -76,7 +76,6 @@ def sbatch_(filepath, omp, mpi, fds_version, mail_type, mail_user, *_, **__):
         except Exception as e:
             logger.warning(f'Failed to analyse MPI_PROCESS from *.fds, n_mpi set to 1. {type(e).__name__}.')
             mpi = 1
-
     sbatch(
         filepath_fds=filepath,
         n_omp=int(omp),
