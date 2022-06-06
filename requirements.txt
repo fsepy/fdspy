@@ -1,3 +1,0 @@
-numpy>=1.15.0
-pandas>=0.23.3
-docopt>=0.6.2
