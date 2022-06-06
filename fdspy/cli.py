@@ -7,27 +7,39 @@ from fdspy.f90nml import read
 FP_FDS_SOURCE_TEMPLATE = os.path.join('home', 'installs', 'FDS{}', 'bin', 'fds')
 
 
-def sbatch(
-        filepath_fds: str,
-        n_omp: int,
-        n_mpi: int,
-        fds_v: str,
-        mail_type: str,
-        mail_user: str
-):
+def sbatch(filepath, omp, mpi, fds_version, mail_type, mail_user, *_, **__):
+    if mpi == -1:
+        try:
+            fds_namelist = read(filepath)
+            mpi_process_list = list()
+            for mesh_namelist in fds_namelist['MESH']:
+                if 'MPI_PROCESS' in mesh_namelist:
+                    mpi_process_list.append(mesh_namelist['MPI_PROCESS'])
+                else:
+                    mpi_process_list.append(-1)
+            if min(mpi_process_list) > -1:
+                mpi = len(set(mpi_process_list))
+            elif min(mpi_process_list) == -1 and max(mpi_process_list) == -1:
+                mpi = len(fds_namelist['MESH'])
+            else:
+                mpi = 1
+        except Exception as e:
+            logger.warning(f'Failed to analyse MPI_PROCESS from *.fds, n_mpi set to 1. {type(e).__name__}.')
+            mpi = 1
+
     # fetch fds source shell script
     try:
-        filepath_fds_source = FP_FDS_SOURCE_TEMPLATE.format(f'{int(fds_v)}')
+        filepath_fds_source = FP_FDS_SOURCE_TEMPLATE.format(f'{int(fds_version)}')
     except ValueError:
-        filepath_fds_source = fds_v
+        filepath_fds_source = fds_version
 
     # make sh file
     from fdspy.sbatch import make_sh
     sh = make_sh(
-        filepath_fds=filepath_fds,
+        filepath_fds=filepath,
         filepath_fds_source=filepath_fds_source,
-        n_omp=n_omp,
-        n_mpi=n_mpi,
+        n_omp=omp,
+        n_mpi=mpi,
         mail_type=mail_type,
         mail_user=mail_user
     )
@@ -55,36 +67,6 @@ def helper_get_list_filepath_end_width(cwd: str, end_with: str) -> list:
             filepath_end_with.append(os.path.join(cwd, i))
 
     return filepath_end_with
-
-
-def sbatch_(filepath, omp, mpi, fds_version, mail_type, mail_user, *_, **__):
-    if mpi == -1:
-        try:
-            fds_namelist = read(filepath)
-            mpi_process_list = list()
-            for mesh_namelist in fds_namelist['MESH']:
-                if 'MPI_PROCESS' in mesh_namelist:
-                    mpi_process_list.append(mesh_namelist['MPI_PROCESS'])
-                else:
-                    mpi_process_list.append(-1)
-            if min(mpi_process_list) > -1:
-                mpi = len(set(mpi_process_list))
-            elif min(mpi_process_list) == -1 and max(mpi_process_list) == -1:
-                mpi = len(fds_namelist['MESH'])
-            else:
-                mpi = 1
-        except Exception as e:
-            logger.warning(f'Failed to analyse MPI_PROCESS from *.fds, n_mpi set to 1. {type(e).__name__}.')
-            mpi = 1
-    sbatch(
-        filepath_fds=filepath,
-        n_omp=int(omp),
-        n_mpi=int(mpi),
-        fds_v=fds_version,
-        mail_type=mail_type,
-        mail_user=mail_user
-    )
-    logger.info('Successfully produced and executed sbatch')
 
 
 def main():
@@ -138,7 +120,7 @@ def main():
         args.filepath = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
 
     if args.sbatch:
-        sbatch_(**args.__dict__)
+        sbatch(**args.__dict__)
 
 
 if __name__ == '__main__':

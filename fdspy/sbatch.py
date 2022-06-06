@@ -1,6 +1,6 @@
 from os.path import basename
 
-sh_template = '\n'.join([
+SH_TEMPLATE = '\n'.join([
     '#!/bin/sh',
     '',
     '#SBATCH -J {name}',
@@ -40,7 +40,7 @@ def make_sh(
     job_name = basename(filepath_fds).replace('.fds', '')
 
     # make sh file
-    sh = sh_template.format(
+    sh = SH_TEMPLATE.format(
         name=job_name,
         n_mpi=n_mpi,
         filepath_fds_source=filepath_fds_source,
