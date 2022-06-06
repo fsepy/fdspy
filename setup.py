@@ -42,9 +42,7 @@ setuptools.setup(
     long_description=long_description,
     packages=[
         "fdspy",
-        "fdspy.calc_mtr",
-        "fdspy.gen_devc",
-        "fdspy.lib",
+        "fdspy.f90nml",
     ],
     install_requires=requirements,
     include_package_data=True,
