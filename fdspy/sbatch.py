@@ -15,8 +15,9 @@ SH_TEMPLATE = '\n'.join([
     'export OMP_NUM_THREADS={n_omp}',
     'export FI_PROVIDER=tcp',
     'export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so',
+    'source /opt/intel/oneapi/servars.sh',
     '',
-    'srun -n $SLURM_NTASKS {filepath_fds_source} {filename_fds}',
+    'srun --mpi=pmi2 -n $SLURM_NTASKS {filepath_fds_source} {filename_fds}',
 ])
 
 
