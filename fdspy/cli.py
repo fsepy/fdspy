@@ -4,7 +4,7 @@ import subprocess
 from fdspy import logger
 from fdspy.f90nml import read
 
-FP_FDS_SOURCE_TEMPLATE = os.path.join('home', 'installs', 'FDS{}', 'bin', 'fds')
+FP_FDS_SOURCE_TEMPLATE = os.path.join(os.sep+'home', 'installs', 'FDS{}', 'bin', 'fds')
 
 
 def sbatch(filepath, omp, mpi, fds_version, mail_type, mail_user, *_, **__):
