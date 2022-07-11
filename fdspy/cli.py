@@ -73,10 +73,10 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='FDS Python Helper Tools')
-    subparsers = parser.add_subparsers(dest='sbatch')
+    subparsers = parser.add_subparsers()
 
     p_sbatch = subparsers.add_parser('sbatch',
-        help='To perform `fdspy stats`, generate a `sbatch` shell script file and run the shell script file with '
+        help='Generate a `sbatch` shell script file and run the shell script file with '
              '`sbash`.'
     )
 
@@ -115,8 +115,6 @@ def main():
                           type=str)
 
     args = parser.parse_args()
-    import pprint
-    pprint.pprint(args)
 
     # get file path
     if args.filepath is not None:
