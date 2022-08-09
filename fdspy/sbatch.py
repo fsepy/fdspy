@@ -31,11 +31,6 @@ def make_sh(
         mail_type: str = 'ALL',
         mail_user: str = 'ian.fu@ofrconsultants.com',
 ) -> str:
-
-    # fetch fds script
-    with open(filepath_fds, "r") as f:
-        fds_script = f.read()
-
     # work out fds file name
     filename_fds = basename(filepath_fds)
 
@@ -50,8 +45,7 @@ def make_sh(
         n_omp=n_omp,
         filename_fds=filename_fds,
         mail_type=mail_type,
-        mail_user=mail_user
+        mail_user=mail_user,
     )
 
     return sh
-
