@@ -122,7 +122,7 @@ def main():
         try:
             args.filepath = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
         except IndexError:
-            raise IndexError(f'Unable to find any *.fds file in directory {os.getcwd()}')
+            raise FileNotFoundError(f'Unable to find any *.fds file in directory {os.getcwd()}')
 
     if args.sub_parser == 'sbatch':
         sbatch(**args.__dict__)
