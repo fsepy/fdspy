@@ -1,26 +1,26 @@
 from os.path import basename
 
-SH_TEMPLATE = '\n'.join([
-    '#!/bin/sh',
-    '',
-    '#SBATCH -J {name}',
-    '#SBATCH -n {n_mpi}',
-    '#SBATCH -p compute',
-    '#SBATCH -e error-%j.err',
-    '#SBATCH -o output-%j.out',
-    '#SBATCH -N 1',
-    '#SBATCH --mail-type {mail_type}',
-    '#SBATCH --mail-user {mail_user}',
-    '',
-    'export OMP_NUM_THREADS={n_omp}',
-    'export FI_PROVIDER=tcp',
-    'export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so',
-    'source /opt/intel/oneapi/setvars.sh',
-    'export PATH=$PATH:/opt/intel/oneapi/mpi/latest/lib',
-    'export PATH=$PATH:/home/installs/FDS679/bin/INTEL/lib',
-    '',
-    'srun --mpi=pmi2 -n $SLURM_NTASKS {filepath_fds_source} {filename_fds}',
-])
+SH_TEMPLATE = (
+    '#!/bin/sh\n'
+    '\n'
+    '#SBATCH -J {name}\n'
+    '#SBATCH -n {n_mpi}\n'
+    '#SBATCH -p compute\n'
+    '#SBATCH -e error-%j.err\n'
+    '#SBATCH -o output-%j.out\n'
+    '#SBATCH -N 1\n'
+    '#SBATCH --mail-type {mail_type}\n'
+    '#SBATCH --mail-user {mail_user}\n'
+    '\n'
+    'export OMP_NUM_THREADS={n_omp}\n'
+    'export FI_PROVIDER=tcp\n'
+    'export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so\n'
+    'source /opt/intel/oneapi/setvars.sh\n'
+    'export PATH=$PATH:/opt/intel/oneapi/mpi/latest/lib\n'
+    'export PATH=$PATH:/home/installs/FDS679/bin/INTEL/lib\n'
+    '\n'
+    'srun --mpi=pmi2 -n $SLURM_NTASKS {filepath_fds_source} {filename_fds}'
+)
 
 
 def make_sh(
