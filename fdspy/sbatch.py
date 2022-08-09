@@ -17,7 +17,7 @@ SH_TEMPLATE = '\n'.join([
     'export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so',
     'source /opt/intel/oneapi/setvars.sh',
     'export PATH=$PATH:/opt/intel/oneapi/mpi/latest/lib',
-    'export PATH=$PATH:/home/installs/FDS679/bin/INTEL/lib'
+    'export PATH=$PATH:/home/installs/FDS679/bin/INTEL/lib',
     '',
     'srun --mpi=pmi2 -n $SLURM_NTASKS {filepath_fds_source} {filename_fds}',
 ])
