@@ -4,7 +4,7 @@ import subprocess
 from fdspy import logger
 from fdspy.f90nml import read
 
-FP_FDS_SOURCE_TEMPLATE = os.path.join(os.sep+'home', 'installs', 'FDS{}', 'bin', 'fds')
+FP_FDS_SOURCE_TEMPLATE = os.path.join(os.sep + 'home', 'installs', 'FDS{}', 'bin', 'fds')
 
 
 def sbatch(filepath, omp, mpi, fds_version, mail_type, mail_user, *_, **__):
@@ -73,12 +73,11 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='FDS Python Helper Tools')
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest='sub_parser')
 
     p_sbatch = subparsers.add_parser('sbatch',
-        help='Generate a `sbatch` shell script file and run the shell script file with '
-             '`sbash`.'
-    )
+                                     help='Generate a `sbatch` shell script file and run the shell script file with `sbash`.'
+                                     )
 
     p_sbatch.add_argument('-o', '--omp',
                           help='Number of OMP. Default 1.',
@@ -125,7 +124,7 @@ def main():
         except IndexError:
             raise IndexError(f'Unable to find any *.fds file in directory {os.getcwd()}')
 
-    if args.sbatch:
+    if args.sub_parser == 'sbatch':
         sbatch(**args.__dict__)
 
 
