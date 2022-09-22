@@ -116,17 +116,21 @@ def main():
 
     args = parser.parse_args()
 
-    # get file path
-    if args.filepath is not None:
-        args.filepath = os.path.realpath(args.filepath)
-    else:
-        try:
-            args.filepath = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
-        except IndexError:
-            raise FileNotFoundError(f'Unable to find any *.fds file in directory {os.getcwd()}')
-
     if args.sub_parser == 'sbatch':
+        # get file path
+        if args.filepath is not None:
+            args.filepath = os.path.realpath(args.filepath)
+        else:
+            try:
+                args.filepath = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
+            except IndexError:
+                print(f'Unable to find any *.fds file in directory {os.getcwd()}')
+                return
         sbatch(**args.__dict__)
+        print(f'`fdspy sbatch` process complete. FDS file {args.filepath} has been submitted.')
+        return
+
+    print('`fdspy` process complete with no actions. Call `fdspy -h to see help`.')
 
 
 if __name__ == '__main__':
