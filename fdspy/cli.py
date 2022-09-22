@@ -51,7 +51,8 @@ def sbatch(filepath, omp, mpi, fds_version, mail_type, mail_user, *_, **__):
         f.write(sh)
 
     # run sh file
-    subprocess.Popen(['sbatch', filename_sh], cwd=os.getcwd())
+    p = subprocess.Popen(['sbatch', filename_sh], cwd=os.getcwd())
+    p.communicate()
     logger.info(f'A job has been submitted: sbatch {filename_sh}')
 
 
