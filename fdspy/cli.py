@@ -1,114 +1,45 @@
-"""fdspy CLI Help.
-Usage:
-    fdspy pre [<file_name>]
-    fdspy post [<file_name>]
-    fdspy sbatch [-o=<int>] [-p=<int>] [--mail-type=<str>] [--mail-user=<str>] [-v=<int_str>] [<file_name>]
-    fdspy stats [<file_name>]
-    fdspy out [--timestats] [<file_name>]
-
-Examples:
-    fdspy pre
-    fdspy sbatch
-    fdspy sbatch -o=2 -p=10 -v=671 --mail-type=END --mail-user=user@email.com example.fds
-    fdspy out --timestats example.out
-
-Options:
-    -h --help
-        To show help.
-    -o=<int>
-        Optional, 1 by default. To specify number of OMP.
-    -p=<int>
-        Optional, -1 by default. To specify number of MPI, -1 to be worked out based on `.fds` script.
-    -v=<int_str>
-        Optional, 671 by default. To specify FDS source version or full FDS shell script file path.
-        e.g. can be 671 (version number) or file path /home/installs/FDS671/bin/FDS6VARS.sh.
-    --mail-type=<str>
-        Optional. Notify user by email when certain event types occur. Valid type values are NONE, BEGIN, END, FAIL,
-        REQUEUE, ALL (equivalent to BEGIN, END, FAIL, REQUEUE, and STAGE_OUT), STAGE_OUT (burst buffer stage out and
-        teardown completed), TIME_LIMIT, TIME_LIMIT_90 (reached 90 percent of time limit), TIME_LIMIT_80 (reached 80
-        percent of time limit), TIME_LIMIT_50 (reached 50 percent of time limit) and ARRAY_TASKS (send emails for each
-        array task). Multiple type values may be specified in a comma separated list. The user to be notified is
-        indicated with --mail-user. Unless the ARRAY_TASKS option is specified, mail notifications on job BEGIN, END and
-        FAIL apply to a job array as a whole rather than generating individual email messages for each task in the job
-        array.
-    --mail-user=<str>
-        Optional. User to receive email notification of state changes as defined by --mail-type. The default value is
-        the submitting user.
-    --timestats
-        Produce simulation time statistics, saved as `file_name.timestats.csv`.
-    <file_name>
-        Optional. Input file name (including extension), use first file found in the directory if not provided.
-
-Commands:
-    fdspy pre
-        Pre-processing. To analyse the `.fds` file in current working directory and produce a summary text file ending
-        with `.stats.txt` and a heat release rate curve plot html file ending with `.hrr.html`.
-    fdspy post
-        Post-processing. To plot heat release rate curve from input `*.fds` and output `*_hrr.csv`.
-    fdspy sbatch
-        To perform `fdspy stats`, generate a `sbatch` shell script file and run the shell script file with `sbash`.
-    fdspy stats
-        Will be DEPRECIATED. Identical to `fdspy pre`.
-    fdspy out
-        Process *.out file
-"""
-
-import copy
 import os
 import subprocess
 
-from docopt import docopt
-
 from fdspy import logger
-from fdspy.lib.fds_out_analyser import FDSOutBaseModel
-from fdspy.lib.fds_script_analyser import FDSAnalyser
+from fdspy.f90nml import read
 
-filepath_fds_source_template = '/home/installs/FDS{}/bin/fds'
-
-
-def stats2(analyser: FDSAnalyser):
-    stats_str = ''
-
-    try:
-        stats_str = analyser.general()
-    except Exception as e:
-        logger.error(f'Failed to generate statistics `general`, {e}')
-    try:
-        stats_str += analyser.mesh()
-    except Exception as e:
-        logger.error(f'Failed to generate statistics `mesh`, {e}')
-    try:
-        stats_str += analyser.slcf()
-    except Exception as e:
-        logger.error(f'Failed to generate statistics `slcf`, {e}')
-
-    if len(stats_str) == 0:
-        raise ValueError('len(stats_str)==0 no statistics produced')
-
-    return stats_str
+FP_FDS_SOURCE_TEMPLATE = os.path.join(os.sep + 'home', 'installs', 'FDS{}', 'bin', 'fds')
 
 
-def sbatch(
-        filepath_fds: str,
-        n_omp: int,
-        n_mpi: int,
-        fds_v: str,
-        mail_type: str,
-        mail_user: str
-):
+def sbatch(filepath, omp, mpi, fds_version, mail_type, mail_user, *_, **__):
+    if mpi == -1:
+        try:
+            fds_namelist = read(filepath)
+            mpi_process_list = list()
+            for mesh_namelist in fds_namelist['MESH']:
+                if 'MPI_PROCESS' in mesh_namelist:
+                    mpi_process_list.append(mesh_namelist['MPI_PROCESS'])
+                else:
+                    mpi_process_list.append(-1)
+            if min(mpi_process_list) > -1:
+                mpi = len(set(mpi_process_list))
+            elif min(mpi_process_list) == -1 and max(mpi_process_list) == -1:
+                mpi = len(fds_namelist['MESH'])
+            else:
+                mpi = 1
+        except Exception as e:
+            logger.warning(f'Failed to analyse MPI_PROCESS from *.fds, n_mpi set to 1. {type(e).__name__}.')
+            mpi = 1
+
     # fetch fds source shell script
     try:
-        filepath_fds_source = filepath_fds_source_template.format(f'{int(fds_v)}')
+        filepath_fds_source = FP_FDS_SOURCE_TEMPLATE.format(f'{int(fds_version)}')
     except ValueError:
-        filepath_fds_source = fds_v
+        filepath_fds_source = fds_version
 
     # make sh file
-    from fdspy.lib.sbatch import make_sh
+    from fdspy.sbatch import make_sh
     sh = make_sh(
-        filepath_fds=filepath_fds,
+        filepath_fds=filepath,
         filepath_fds_source=filepath_fds_source,
-        n_omp=n_omp,
-        n_mpi=n_mpi,
+        n_omp=omp,
+        n_mpi=mpi,
         mail_type=mail_type,
         mail_user=mail_user
     )
@@ -120,7 +51,8 @@ def sbatch(
         f.write(sh)
 
     # run sh file
-    subprocess.Popen(['sbatch', filename_sh], cwd=os.getcwd())
+    p = subprocess.Popen(['sbatch', filename_sh], cwd=os.getcwd())
+    p.communicate()
     logger.info(f'A job has been submitted: sbatch {filename_sh}')
 
 
@@ -139,68 +71,67 @@ def helper_get_list_filepath_end_width(cwd: str, end_with: str) -> list:
 
 
 def main():
-    arguments = docopt(__doc__)
+    import argparse
 
-    logger.debug(f'\n{arguments}')
+    parser = argparse.ArgumentParser(description='FDS Python Helper Tools')
+    subparsers = parser.add_subparsers(dest='sub_parser')
 
-    # get file path
-    if arguments["<file_name>"]:
-        file_name = os.path.realpath(arguments["<file_name>"])
-        if not os.path.isfile(file_name):
-            raise ValueError(f'{file_name} is not a file or does not exits')
-    else:
-        file_name = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
+    p_sbatch = subparsers.add_parser('sbatch',
+                                     help='Generate a `sbatch` shell script file and run the shell script file with `sbash`.'
+                                     )
 
-    if any([arguments[i] for i in ['pre', 'post', 'sbatch', 'stats']]):
-        try:
-            with open(file_name, 'r') as f:
-                analyser = FDSAnalyser(fds_raw=f.read())
-        except Exception as e:
-            logger.warning(f'Failed to instantiate FDSAnalyser, {e}')
-            analyser = None
+    p_sbatch.add_argument('-o', '--omp',
+                          help='Number of OMP. Default 1.',
+                          nargs='?',
+                          default=1,
+                          type=int)
+    p_sbatch.add_argument('-p', '--mpi',
+                          help='Number of MPI. If undefined, -p will be set based on the *.fds file by the following:'
+                               '1. If `MPI_PROCESS` is defined for each and every `MESH`: -p will be equal to the greatest MPI_PROCESS.'
+                               '2. If `MPI_PROCESS` is defined for some but not all `MESH`: -p will be set to 1.'
+                               '3. If `MPI_PROCESS` is not defined for all `MESH`: -p will be set to the number of `MESH`',
+                          nargs='?',
+                          default=-1,
+                          type=int)
+    p_sbatch.add_argument('-v', '--fds-version',
+                          help=f'FDS source version or full FDS shell script file path. e.g. can be 671 (version number) ',
+                          nargs='?',
+                          default='671',
+                          type=str)
+    p_sbatch.add_argument('--mail-type',
+                          help='Notify user by email when certain event types occur. Valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL (equivalent to BEGIN, END, FAIL, REQUEUE, and STAGE_OUT), STAGE_OUT (burst buffer stage out and teardown completed), TIME_LIMIT, TIME_LIMIT_90 (reached 90 percent of time limit), TIME_LIMIT_80 (reached 80 percent of time limit), TIME_LIMIT_50 (reached 50 percent of time limit) and ARRAY_TASKS (send emails for each array task). Multiple type values may be specified in a comma separated list. The user to be notified is indicated with --mail-user. Unless the ARRAY_TASKS option is specified, mail notifications on job BEGIN, END and FAIL apply to a job array as a whole rather than generating individual email messages for each task in the job array.',
+                          nargs='?',
+                          default='NONE',
+                          type=str)
+    p_sbatch.add_argument('--mail-user',
+                          help=f'User to receive email notification of state changes as defined by --mail-type. The default value is the submitting user.',
+                          nargs='?',
+                          default='NONE',
+                          type=str)
+    p_sbatch.add_argument('filepath',
+                          help=f'Input file name (including extension), use first *.fds file found in the current working directory if not provided.',
+                          nargs='?',
+                          default=None,
+                          type=str)
 
-    if arguments["stats"] or arguments["pre"] or arguments['sbatch']:
-        try:
-            stats_string = stats2(analyser)
-            with open(file_name + ".stats.txt", "w+", encoding='utf-8') as f:
-                f.write(stats_string)
-            logger.info('Successfully generated FDS script statistics' + '\n' + stats_string)
-        except Exception as e:
-            logger.warning(f'Failed to generate FDS script statistics, {e}')
+    args = parser.parse_args()
 
-    if arguments["sbatch"]:
-        try:
+    if args.sub_parser == 'sbatch':
+        # get file path
+        if args.filepath is not None:
+            args.filepath = os.path.realpath(args.filepath)
+        else:
             try:
-                df = copy.copy(analyser.fds_df)
-                n_mpi = len(set(df['MPI_PROCESS'].dropna().values))
-            except Exception as e:
-                logger.warning(f'Failed to parse MPI_PROCESS from FDSAnalyser, n_mpi set to 1, {e}')
-                n_mpi = 1
+                args.filepath = helper_get_list_filepath_end_width(os.getcwd(), '.fds')[0]
+            except IndexError:
+                print(f'Unable to find any *.fds file in directory {os.getcwd()}')
+                return
+        sbatch(**args.__dict__)
+        print(f'`fdspy sbatch` process complete. FDS file {args.filepath} has been submitted.')
+        return
 
-            n_omp = arguments['-o'] if arguments['-o'] else 1
-            n_mpi = arguments["-p"] if arguments["-p"] else n_mpi
-            fds_v = arguments['-v'] if arguments['-v'] else '671'
-            mail_type = arguments['--mail-type'] if arguments['--mail-type'] else 'NONE'
-            mail_user = arguments['--mail-user'] if arguments['--mail-user'] else 'NONE'
+    print('`fdspy` process complete with no actions. Call `fdspy -h to see help`.')
 
-            sbatch(
-                filepath_fds=file_name,
-                n_omp=int(n_omp),
-                n_mpi=int(n_mpi),
-                fds_v=fds_v,
-                mail_type=mail_type,
-                mail_user=mail_user
-            )
-            logger.info('Successfully produced and executed sbatch')
-        except Exception as e:
-            logger.warning(f'Failed to execute sbatch, {e}')
 
-    if arguments["post"]:
-        logger.warning('post is temporarily removed')
-
-    if arguments["out"]:
-        model = FDSOutBaseModel()
-        with open(file_name, 'r') as f_:
-            fds_out = f_.read()
-        model.read_fds_out(fds_out)
-        model.make_simulation_time_stats(fp_csv=os.path.realpath(file_name.replace('.out', '') + '.timestats.csv'))
+if __name__ == '__main__':
+    main()
