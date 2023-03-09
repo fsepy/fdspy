@@ -31,3 +31,7 @@ fdspy/preprocessor/test.csv
 tests/fds_scripts/*.txt
 tests/fds_scripts/*.sh
 tests/fds_scripts/*.out.fds
+
+buildscript/*
+venv/*
+venv-py/*
